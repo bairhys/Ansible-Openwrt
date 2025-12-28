@@ -84,3 +84,11 @@ Save and apply the changes, then reconnect the device to your main network.
 ## CAKE Autorate note
 
 A custom CAKE autorate config file can be placed at `/custom_files/config.primary.sh` which are git ignored.
+
+## Tailscale
+
+This Ansible playbook cannot fully automate the security approvals required by the Tailscale platform itself and some manual steps are required:
+- Approve Subnet Routes: Go to the Tailscale Admin Console, click the three-dot menu (...) 
+  for your OpenWrt router, select Edit route settings, and check the box for your subnet.
+- Client Configuration: On your remote device (phone/laptop), ensure the Tailscale app setting 
+  "Use Tailscale Subnets" is toggled ON to reach your LAN devices.
