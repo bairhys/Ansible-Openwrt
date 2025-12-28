@@ -9,6 +9,7 @@
     - "luci-app-ddns"
     - "ddns-scripts-noip"
     - "ddns-scripts-freedns"
+    - "bind-host"
 
 - name: Configure No-IP DDNS service
   community.openwrt.uci:
