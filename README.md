@@ -83,7 +83,7 @@ Save and apply the changes, then reconnect the device to your main network.
 
 ## CAKE Autorate note
 
-A custom CAKE autorate config file can be placed at `/custom_files/config.primary.sh` which are git ignored.
+A custom CAKE autorate config file can be placed at `/custom_files/config.primary.sh` which are git ignored. Use Unix line endings.
 
 ## Tailscale
 
