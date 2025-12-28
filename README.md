@@ -1,6 +1,6 @@
 # Ansible OpenWrt
 
-This Ansible playbook provisions an OpenWrt network from factory defaults. It configures:
+This Ansible playbook provisions an OpenWrt network from factory defaults. It automatically configures:
 
 - Automatic WAN bandwidth management (CAKE Autorate)
 - Wi‑Fi with fast client roaming across all OpenWrt devices
