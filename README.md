@@ -2,14 +2,14 @@
 
 This Ansible playbook provisions an OpenWrt network from factory defaults. It configures:
 
+- Automatic WAN bandwidth management (CAKE Autorate)
+- Wi‑Fi with fast client roaming across all OpenWrt devices
+- WireGuard server to access LAN devices with easy QR-code client setup
+- Tailscale client with subnet routing
+- Dynamic DNS via [no-ip.com](https://www.noip.com/) and [FreeDNS (Afraid)](https://freedns.afraid.org/)
 - Hostnames
 - Timezones
 - WAN DNS servers
-- Automatic WAN bandwidth management (CAKE Autorate)
-- Wi‑Fi with fast client roaming across OpenWrt devices
-- Dynamic DNS via [no-ip.com](https://www.noip.com/) and [FreeDNS (Afraid)](https://freedns.afraid.org/)
-- WireGuard server to access LAN devices with easy QR-code client setup
-- Tailscale client with subnet routing
 
 ## Network Diagram
 
