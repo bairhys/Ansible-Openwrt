@@ -92,3 +92,13 @@ This Ansible playbook cannot fully automate the security approvals required by t
   for your OpenWrt router, select Edit route settings, and check the box for your subnet.
 - Client Configuration: On your remote device (phone/laptop), ensure the Tailscale app setting 
   "Use Tailscale Subnets" is toggled ON to reach your LAN devices.
+
+## Wireguard tips
+
+- Setup a Dynamic DNS service
+- To add the Wireguard client to your device with a QR code:
+	- On the main router (192.168.1.1), navigate to Network → Interfaces and click Edit on the Wireguard interface.
+	- With the Wireguard interface settings open, navigate to Peers tab, click Edit for client1
+	- At the bottom, click Configuration Export
+	- Set the Connection Enpoint to your Dynamic DNS service
+	- In the Wireguard app on your device, press add and scan QR code
