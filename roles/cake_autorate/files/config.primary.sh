@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+# *** INSTANCE-SPECIFIC CONFIGURATION OPTIONS ***
+#
+# cake-autorate will run one instance per config file present in the directory where
+# cake-autorate is found (typically /root/cake-autorate). The config files must be in
+# the directory in the form: config.instance.sh. Thus multiple instances of cake-autorate
+# can be established by setting up appropriate config files like config.primary.sh and
+# config.secondary.sh for the respective first and second instances of cake-autorate.
+
+### For multihomed setups, it is the responsibility of the user to ensure that the probes
+### sent by this instance of cake-autorate actually travel through these interfaces.
+### See ping_extra_args and ping_prefix_string
+
+dl_if=ifb4wan # download interface
+ul_if=wan     # upload interface
+
+# Set either of the below to 0 to adjust one direction only
+# or alternatively set both to 0 to simply use cake-autorate to monitor a connection
+adjust_dl_shaper_rate=1 # enable (1) or disable (0) actually changing the dl shaper rate
+adjust_ul_shaper_rate=1 # enable (1) or disable (0) actually changing the ul shaper rate
+
+min_dl_shaper_rate_kbps=30000  # minimum bandwidth for download (Kbit/s)
+base_dl_shaper_rate_kbps=80000 # steady state bandwidth for download (Kbit/s)
+max_dl_shaper_rate_kbps=300000  # maximum bandwidth for download (Kbit/s)
+
+min_ul_shaper_rate_kbps=5000  # minimum bandwidth for upload (Kbit/s)
+base_ul_shaper_rate_kbps=10000 # steady state bandwidth for upload (KBit/s)
+max_ul_shaper_rate_kbps=35000  # maximum bandwidth for upload (Kbit/s)
+
+connection_active_thr_kbps=2000  # threshold in Kbit/s below which dl/ul is considered idle
+
+# Logging toggles for various stats
+output_processing_stats=0 # enable (1) or disable (0) output monitoring lines showing processing stats
+output_load_stats=0       # enable (1) or disable (0) output monitoring lines showing achieved loads
+output_reflector_stats=0  # enable (1) or disable (0) output monitoring lines showing reflector stats
+output_summary_stats=0    # enable (1) or disable (0) output monitoring lines showing summary stats
+output_cpu_stats=0        # enable (1) or disable (0) output monitoring lines showing CPU usage percentages
+output_cpu_raw_stats=0    # enable (1) or disable (0) output monitoring lines showing raw CPU usage lines
+
+# *** OVERRIDES ***

@@ -1,0 +1,3 @@
+---
+- name: Restart DDNS
+  ansible.builtin.raw: "/etc/init.d/ddns restart"

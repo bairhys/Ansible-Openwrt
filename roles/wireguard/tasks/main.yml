@@ -1,0 +1,103 @@
+---
+- name: Install WireGuard packages
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "wireguard-tools"
+    - "luci-proto-wireguard"
+    - "qrencode"
+
+- name: Generate WireGuard Keys (if missing)
+  ansible.builtin.shell: |
+    umask go=
+    [ -f wgserver_private_key.key ] || wg genkey > wgserver_private_key.key
+    [ -f wgserver_public_key.pub ] || cat wgserver_private_key.key | wg pubkey > wgserver_public_key.pub
+    [ -f wgclient_private_key.key ] || wg genkey > wgclient_private_key.key
+    [ -f wgclient_public_key.pub ] || cat wgclient_private_key.key | wg pubkey > wgclient_public_key.pub
+  args:
+    chdir: /etc/config/
+    executable: /bin/sh
+
+- name: Read WireGuard keys for configuration
+  ansible.builtin.shell: "cat /etc/config/{{ item }}"
+  register: keys
+  loop:
+    - wgserver_private_key.key
+    - wgclient_private_key.key
+    - wgclient_public_key.pub
+  changed_when: false
+
+- name: Set WireGuard key facts
+  ansible.builtin.set_fact:
+    wgserver_private_key: "{{ keys.results[0].stdout }}"
+    wgclient_private_key: "{{ keys.results[1].stdout }}"
+    wgclient_public_key: "{{ keys.results[2].stdout }}"
+
+- name: Configure WireGuard network interface
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete network.{{ wireguard_server_if }}
+      set network.{{ wireguard_server_if }}="interface"
+      set network.{{ wireguard_server_if }}.proto="wireguard"
+      set network.{{ wireguard_server_if }}.private_key="{{ wgserver_private_key }}"
+      set network.{{ wireguard_server_if }}.listen_port="{{ wireguard_server_port }}"
+      add_list network.{{ wireguard_server_if }}.addresses="{{ wireguard_server_addr_cdir }}"
+
+- name: Configure WireGuard client
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete network.{{ wireguard_server_if }}_client
+      set network.{{ wireguard_server_if }}_client="wireguard_{{ wireguard_server_if }}"
+      set network.{{ wireguard_server_if }}_client.public_key="{{ wgclient_public_key }}"
+      set network.{{ wireguard_server_if }}_client.private_key="{{ wgclient_private_key }}"
+      set network.{{ wireguard_server_if }}_client.description="client1"
+      add_list network.{{ wireguard_server_if }}_client.allowed_ips="{{ wireguard_server_client_allowed_ips }}"
+
+- name: Configure WireGuard firewall rules
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete firewall.Wireguard
+      set firewall.Wireguard=zone
+      set firewall.Wireguard.name='Wireguard'
+      set firewall.Wireguard.input='ACCEPT'
+      set firewall.Wireguard.output='ACCEPT'
+      set firewall.Wireguard.forward='ACCEPT'
+      set firewall.Wireguard.masq='1'
+      set firewall.Wireguard.mtu_fix='1'
+      add_list firewall.Wireguard.network='Wireguard'
+      add_list firewall.Wireguard.network='lan'
+
+      delete firewall.Wireguard_to_wan
+      set firewall.Wireguard_to_WAN=forwarding
+      set firewall.Wireguard_to_WAN.src='Wireguard'
+      set firewall.Wireguard_to_WAN.dest='wan'
+      set firewall.Wireguard_to_WAN.name='Wireguard_to_WAN'
+
+      delete firewall.LAN_to_Wireguard
+      set firewall.LAN_to_Wireguard=forwarding
+      set firewall.LAN_to_Wireguard.src='lan'
+      set firewall.LAN_to_Wireguard.dest='Wireguard'
+      set firewall.LAN_to_Wireguard.name='LAN_to_Wireguard'
+
+      delete firewall.WireguardPF
+      set firewall.WireguardPF='redirect'
+      set firewall.WireguardPF.name='WireguardPF'
+      set firewall.WireguardPF.src='wan'
+      set firewall.WireguardPF.src_dport="{{wireguard_server_port}}"
+      set firewall.WireguardPF.dest='lan'
+      set firewall.WireguardPF.dest_ip="{{ wireguard_server_addr}}"
+      set firewall.WireguardPF.dest_port="{{wireguard_server_port}}"
+      set firewall.WireguardPF.target='DNAT'
+      add_list firewall.WireguardPF.proto='udp'
+
+- name: Restart firewall and network services
+  ansible.builtin.shell: |
+    /etc/init.d/firewall restart
+    /etc/init.d/network restart

@@ -1,0 +1,37 @@
+---
+ddns_interface: "wan"
+ddns_check_unit: "minutes"
+ddns_check_interval: "10"
+# IPv6 support disabled by default for Afraid updates (IPv4)
+
+# No-IP configuration
+noip_enabled: true
+noip_service_name: "no-ip.com"
+noip_lookup_host: "{{ vault_noip_hostname }}"
+noip_domain: "{{ noip_lookup_host }}"
+noip_username: "{{ vault_noip_username }}"
+noip_password: "{{ vault_noip_password }}"
+noip_ip_source: "web"
+noip_ip_url: "http://checkip.dyndns.com"
+noip_use_syslog: "2"
+noip_force_interval: "1"
+noip_force_unit: "days"
+noip_retry_max_count: "5"
+noip_retry_unit: "seconds"
+noip_use_ipv6: "0"
+
+# FreeDNS Afraid configuration
+afraid_enabled: true
+afraid_service_name: "afraid.org-basicauth"
+afraid_lookup_host: "{{  vault_afraid_hostname }}"
+afraid_domain: "{{ afraid_lookup_host }}"
+afraid_username: "{{ vault_afraid_username  }}"
+afraid_password: "{{ vault_afraid_password  }}"
+afraid_ip_source: "web"
+afraid_ip_url: "http://checkip.dyndns.com"
+afraid_use_syslog: "2"
+afraid_force_interval: "1"
+afraid_force_unit: "days"
+afraid_retry_max_count: "5"
+afraid_retry_unit: "seconds"
+afraid_use_ipv6: "0"

@@ -1,0 +1,3 @@
+---
+- name: Restart Network
+  ansible.builtin.raw: "/etc/init.d/network restart"

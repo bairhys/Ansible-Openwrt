@@ -1,0 +1,17 @@
+---
+# WireGuard VPN interface configuration
+vpn_if: "vpn"
+vpn_port: "51820"
+vpn_addr: "192.168.9.1/24"
+vpn_addr6: "fd00:9::1/64"
+
+# Default client configuration
+client_v4: "192.168.9.2/32"
+client_v6: "fd00:9::2/128"
+
+# WireGuard VPN interface configuration
+wireguard_server_if: "Wireguard"
+wireguard_server_port: "51820"
+wireguard_server_addr: "172.16.1.1"
+wireguard_server_addr_cdir: "{{wireguard_server_addr}}/24"
+wireguard_server_client_allowed_ips: "172.16.1.2/32"

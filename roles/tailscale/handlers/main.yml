@@ -1,0 +1,6 @@
+---
+- name: Restart Network
+  ansible.builtin.raw: "/etc/init.d/network restart"
+
+- name: Reload Firewall
+  ansible.builtin.raw: "/etc/init.d/firewall reload"

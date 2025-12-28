@@ -1,0 +1,74 @@
+all:
+  vars:
+    # Inventory connection defaults
+    ansible_ssh_pass: "{{ vault_ssh_password }}"
+    ansible_user: root
+    ansible_port: 22
+
+    # Example LAN subnet
+    tailscale_local_subnet: "192.168.1.0/24"
+
+    # Example timezone configuration
+    timezone_zonename: Australia/Melbourne
+    timezone_string: "AEST-10AEDT-11,M10.1.0/02:00:00,M4.1.0/03:00:00"
+
+    # WAN DNS servers
+    wan_dns_servers:
+      - "1.1.1.1"
+      - "1.0.0.1"
+
+    wifi_country: "AU"
+
+  children:
+    openwrt_router:
+      hosts:
+        router-main:
+          ansible_host: 192.168.1.1
+          # Per-host Wi‑Fi settings
+          wifi_settings:
+            radio0:
+              phy: wl0
+              band: 2g
+              channel: 1
+              htmode: HT20
+            radio1:
+              phy: wl1
+              band: 5g
+              channel: 36
+              htmode: HE80
+
+    openwrt_APs:
+      hosts:
+        ap-bedroom:
+          ansible_host: 192.168.1.2
+          # Per-host Wi‑Fi settings for AP
+          wifi_settings:
+            radio0:
+              phy: wl0
+              band: 2g
+              channel: 6
+              htmode: HT20
+              path: example-path-radio0 # can be found with: cat /etc/config/wireless
+            radio1:
+              phy: wl1
+              band: 5g
+              channel: 52
+              htmode: HE80
+              path: example-path-radio1 # can be found with: cat /etc/config/wireless
+
+        ap-garage:
+          ansible_host: 192.168.1.3
+          # Per-host Wi‑Fi settings for AP
+          wifi_settings:
+            radio0:
+              phy: wl0
+              band: 2g
+              channel: 11
+              htmode: HT20
+              path: example-path-radio0 # can be found with: cat /etc/config/wireless
+            radio1:
+              phy: wl1
+              band: 5g
+              channel: 149
+              htmode: HT40
+              path: example-path-radio1 # can be found with: cat /etc/config/wireless

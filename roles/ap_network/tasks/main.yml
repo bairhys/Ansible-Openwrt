@@ -1,0 +1,49 @@
+---
+- name: Configure network
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: lan
+    autocommit: true
+    value:
+      gateway: "{{ hostvars[groups['openwrt_router'][0]].ansible_host }}"
+      dns:
+        - "{{ hostvars[groups['openwrt_router'][0]].ansible_host }}"
+  notify: Restart Network
+
+- name: Disable DHCP on APs (lan)
+  community.openwrt.uci:
+    command: set
+    key: dhcp.lan.ignore
+    value: '1'
+    autocommit: true
+  notify: Reload DHCP
+
+- name: Disable RA-Service, DHCPv6-Service, and NDP Proxy on LAN
+  community.openwrt.uci: 
+    command: set
+    key: "dhcp.lan.{{ item }}"
+    value: 'disabled'
+    autocommit: true
+  loop:
+    - ra
+    - dhcpv6
+    - ndp
+  notify: Reload DHCP
+
+- name: Remove IPv6 assignment from LAN interface
+  community.openwrt.uci: 
+    command: set
+    key: "network.lan.ip6assign"
+    value: '0'
+    autocommit: true
+  notify: Restart Network
+
+- name: Disable IPv6 ULA Prefix (Global)
+  community.openwrt.uci:
+    command: delete
+    key: "network.globals.ula_prefix"
+    autocommit: true
+  ignore_errors: true
+  notify: Restart Network

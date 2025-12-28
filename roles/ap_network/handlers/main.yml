@@ -1,0 +1,6 @@
+---
+- name: Reload DHCP
+  ansible.builtin.raw: "/etc/init.d/odhcpd restart"
+
+- name: Restart Network
+  ansible.builtin.raw: "/etc/init.d/network restart"

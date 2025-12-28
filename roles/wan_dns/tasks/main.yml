@@ -1,0 +1,18 @@
+---
+- name: Disable ISP-provided DNS (peerdns)
+  community.openwrt.uci:
+    command: set
+    key: network.wan.peerdns
+    value: '0'
+    autocommit: true
+
+- name: Configure WAN DNS servers
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: wan
+    autocommit: true
+    value:
+      dns: "{{ wan_dns_servers }}"
+  notify: Restart Network

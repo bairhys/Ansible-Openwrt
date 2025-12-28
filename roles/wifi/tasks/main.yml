@@ -1,0 +1,87 @@
+---
+- name: Remove existing wpad variant (mbedtls)
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: absent
+  with_items:
+  - "wpad-basic-mbedtls"
+  - "wpad-mesh-wolfssl"
+
+- name: Install fpackages
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "luci-app-usteer"
+
+- name: Install full wpad for 802.11r support
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "wpad-mbedtls"
+  register: wpad_install
+
+- name: Trigger reboot
+  ansible.builtin.shell: "sleep 2 && reboot"
+  async: 1
+  poll: 0
+  when: wpad_install.changed
+
+- name: Wait for the router to come back online
+  ansible.builtin.wait_for_connection:
+    delay: 5        # Don't even try for the first 10 seconds
+    timeout: 300       # Give up after 5 minutes
+  when: wpad_install.changed
+
+- name: Deploy usteer config
+  community.openwrt.copy:
+    src: usteer.j2
+    dest: /etc/config/usteer
+    mode: '0644'
+  register: usteer_config_copy
+
+- name: reload usteer
+  ansible.builtin.raw: /etc/init.d/usteer reload
+  when: usteer_config_copy.changed
+
+- name: Configure Wi-Fi Interfaces (SSIDs)
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set wireless.{{ item.device_name }}.type={{ wifi_common_iface.type }}
+      set wireless.{{ item.device_name }}.phy={{ item.device_config.phy }}
+      set wireless.{{ item.device_name }}.country={{ wifi_common_iface.country }}
+      set wireless.{{ item.device_name }}.cell_density={{ wifi_common_iface.cell_density }}
+      set wireless.{{ item.device_name }}.htmode={{ item.device_config.htmode }}
+      set wireless.{{ item.device_name }}.band={{ item.device_config.band }}
+      set wireless.{{ item.device_name }}.channel={{ item.device_config.channel }}
+      set wireless.{{ item.device_name }}.disabled={{ wifi_common_iface.disabled }}
+      {% if item.device_config.path is defined and item.device_config.path %}
+      set wireless.{{ item.device_name }}.path={{ item.device_config.path }}
+      {% endif %}
+
+      set wireless.default_{{ item.device_name }}.device={{ item.device_name }}
+      set wireless.default_{{ item.device_name }}.network={{ wifi_common_iface.network }}
+      set wireless.default_{{ item.device_name }}.mode={{ wifi_common_iface.mode }}
+      set wireless.default_{{ item.device_name }}.ssid={{ wifi_common_iface.ssid }}
+      set wireless.default_{{ item.device_name }}.encryption={{ wifi_common_iface.encryption }}
+      set wireless.default_{{ item.device_name }}.key={{ wifi_common_iface.key }}
+      set wireless.default_{{ item.device_name }}.ft_over_ds={{ wifi_common_iface.ft_over_ds }}
+      set wireless.default_{{ item.device_name }}.ft_psk_generate_local={{ wifi_common_iface.ft_psk_generate_local }}
+      set wireless.default_{{ item.device_name }}.ieee80211r={{ wifi_common_iface.ieee80211r }}
+      set wireless.default_{{ item.device_name }}.mobility_domain={{ wifi_common_iface.mobility_domain }}
+      set wireless.default_{{ item.device_name }}.nasid={{ inventory_hostname | hash('md5') | truncate(12, True, '') }}
+      set wireless.default_{{ item.device_name }}.ieee80211k={{ wifi_common_iface.ieee80211k }}
+      set wireless.default_{{ item.device_name }}.time_advertisement={{ wifi_common_iface.time_advertisement }}
+      set wireless.default_{{ item.device_name }}.time_zone={{ wifi_common_iface.time_zone }}
+      set wireless.default_{{ item.device_name }}.bss_transition={{ wifi_common_iface.bss_transition }}
+      set wireless.default_{{ item.device_name }}.wnm_sleep_mode={{ wifi_common_iface.wnm_sleep_mode }}
+      set wireless.default_{{ item.device_name }}.wmm={{ wifi_common_iface.wmm }}
+  loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
+  register: uci_result
+
+- name: Reload wireless interface
+  ansible.builtin.raw: wifi reload
+  when: uci_result.changed

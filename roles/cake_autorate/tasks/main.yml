@@ -1,0 +1,99 @@
+---
+- name: Install cake autorate required packages
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "bash"
+  - "luci-app-sqm"
+  - "fping"
+
+- name: Upload sqm config to device
+  community.openwrt.copy:
+    src: sqm
+    dest: /etc/config/sqm
+    mode: '0644'
+  register: sqm_config_upload
+
+- name: Reload sqm service
+  ansible.builtin.raw: /etc/init.d/sqm restart
+  when: sqm_config_upload.changed
+
+- name: Look for local custom tasks
+  include_tasks: "{{ custom_tasks_file }}"
+  when: custom_tasks_file is defined
+
+- name: Check if cake-autorate is already installed
+  ansible.builtin.raw: test -d /root/cake-autorate && echo 'exists' || echo 'missing'
+  register: cake_autorate_check
+  changed_when: false
+
+- name: Download cake autorate setup script
+  ansible.builtin.raw: wget -O /tmp/cake-autorate_setup.sh https://raw.githubusercontent.com/lynxthecat/cake-autorate/master/setup.sh
+  register: cake_script_download
+  when: "'missing' in cake_autorate_check.stdout"
+  ignore_errors: true
+
+- name: stop prometheus-cake-autorate-exporter service
+  ansible.builtin.raw: service cake-autorate disable && service cake-autorate stop && sleep 2
+  when: "'missing' in cake_autorate_check.stdout and cake_script_download.rc == 0"
+  ignore_errors: true
+
+- name: Run cake autorate setup script
+  ansible.builtin.raw: printf 'y\ny\n' | sh /tmp/cake-autorate_setup.sh
+  when: "'missing' in cake_autorate_check.stdout and cake_script_download.rc == 0"
+
+- name: Upload cake autorate config to device
+  community.openwrt.copy:
+    src: "{{ custom_cake_config | default('config.primary.sh') }}"
+    dest: /root/cake-autorate/config.primary.sh
+    mode: '0644'
+  register: cake_config_upload
+
+- name: Reload cake-autorate service
+  # best to alway enable/restart as we stopped it earlier
+  ansible.builtin.raw: service cake-autorate enable && service cake-autorate restart
+
+- name: Install prometheus-cake-autorate-exporter required packages
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+  - "python3"
+  - "python3-pip"
+
+- name: install prometheus-client
+  ansible.builtin.raw: pip install prometheus-client
+
+- name: Check if prometheus-cake-autorate-exporter is already installed
+  ansible.builtin.raw: test -f /root/prometheus_cake_autorate_exporter.py && echo 'exists' || echo 'missing'
+  register: prometheus_exporter_check
+  changed_when: false
+
+- name: Download prometheus-cake-autorate-exporter
+  ansible.builtin.raw: wget -O /tmp/prometheus_cake_autorate_exporter.py https://raw.githubusercontent.com/bairhys/prometheus-cake-autorate-exporter/main/prometheus_cake_autorate_exporter.py
+  register: cake_script_exporter_download
+  when: "'missing' in prometheus_exporter_check.stdout"
+  ignore_errors: true
+
+- name: Copy prometheus-cake-autorate-exporter to device
+  ansible.builtin.raw: cp -n /tmp/prometheus_cake_autorate_exporter.py /root/prometheus_cake_autorate_exporter.py
+  when: "'missing' in prometheus_exporter_check.stdout and cake_script_exporter_download.rc == 0"
+
+- name: Download prometheus-cake-autorate-exporter init.d script
+  ansible.builtin.raw: wget -O /tmp/prometheus-node-exporter-cake-autorate https://raw.githubusercontent.com/bairhys/prometheus-cake-autorate-exporter/main/prometheus-node-exporter-cake-autorate
+  register: cake_script_exporter_initd_download
+  when: "'missing' in prometheus_exporter_check.stdout and cake_script_exporter_download.rc == 0"
+  ignore_errors: true
+
+- name: Copy init.d script to device
+  ansible.builtin.raw: cp -n /tmp/prometheus-node-exporter-cake-autorate /etc/init.d/prometheus-node-exporter-cake-autorate
+  register: cake_script_exporter_initd_download_copied
+  when: "'missing' in prometheus_exporter_check.stdout and cake_script_exporter_download.rc == 0 and cake_script_exporter_initd_download.rc == 0"
+
+- name: Set execute permission on init.d script
+  ansible.builtin.raw: chmod +x /etc/init.d/prometheus-node-exporter-cake-autorate
+  when: cake_script_exporter_initd_download_copied.changed
+
+- name: Reload prometheus-cake-autorate-exporter service
+  ansible.builtin.raw: service prometheus-node-exporter-cake-autorate enable && service prometheus-node-exporter-cake-autorate restart  

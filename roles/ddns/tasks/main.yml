@@ -1,0 +1,71 @@
+---
+- name: Install DDNS packages (ddns-scripts, ca-bundle)
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "ddns-scripts"
+    - "ca-bundle"
+    - "luci-app-ddns"
+    - "ddns-scripts-noip"
+    - "ddns-scripts-freedns"
+
+- name: Configure No-IP DDNS service
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete ddns.noip
+      set ddns.noip=service
+      set ddns.noip.service_name='{{ noip_service_name }}'
+      set ddns.noip.use_ipv6='{{ noip_use_ipv6 }}'
+      set ddns.noip.enabled='{{ 1 if noip_enabled else 0 }}'
+      set ddns.noip.lookup_host='{{ noip_lookup_host }}'
+      set ddns.noip.domain='{{ noip_domain }}'
+      set ddns.noip.username='{{ noip_username }}'
+      set ddns.noip.password='{{ noip_password }}'
+      set ddns.noip.ip_source='{{ noip_ip_source }}'
+      set ddns.noip.interface='{{ ddns_interface }}'
+      set ddns.noip.use_syslog='{{ noip_use_syslog }}'
+      set ddns.noip.ip_url='{{ noip_ip_url }}'
+      set ddns.noip.check_unit='{{ ddns_check_unit }}'
+      set ddns.noip.check_interval='{{ ddns_check_interval }}'
+      set ddns.noip.force_interval='{{ noip_force_interval }}'
+      set ddns.noip.force_unit='{{ noip_force_unit }}'
+      set ddns.noip.retry_max_count='{{ noip_retry_max_count }}'
+      set ddns.noip.retry_unit='{{ noip_retry_unit }}'
+  notify: Restart DDNS
+
+- name: Configure FreeDNS Afraid DDNS service
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete ddns.afraid
+      set ddns.afraid=service
+      set ddns.afraid.service_name='{{ afraid_service_name }}'
+      set ddns.afraid.use_ipv6='{{ afraid_use_ipv6 }}'
+      set ddns.afraid.enabled='{{ 1 if afraid_enabled else 0 }}'
+      set ddns.afraid.lookup_host='{{ afraid_lookup_host }}'
+      set ddns.afraid.domain='{{ afraid_domain }}'
+      set ddns.afraid.username='{{ afraid_username }}'
+      set ddns.afraid.password='{{ afraid_password }}'
+      set ddns.afraid.ip_source='{{ afraid_ip_source }}'
+      set ddns.afraid.interface='{{ ddns_interface }}'
+      set ddns.afraid.use_syslog='{{ afraid_use_syslog }}'
+      set ddns.afraid.ip_url='{{ afraid_ip_url }}'
+      set ddns.afraid.check_unit='{{ ddns_check_unit }}'
+      set ddns.afraid.check_interval='{{ ddns_check_interval }}'
+      set ddns.afraid.force_interval='{{ afraid_force_interval }}'
+      set ddns.afraid.force_unit='{{ afraid_force_unit }}'
+      set ddns.afraid.retry_max_count='{{ afraid_retry_max_count }}'
+      set ddns.afraid.retry_unit='{{ afraid_retry_unit }}'
+  notify: Restart DDNS
+
+- name: Enable DDNS service at boot
+  ansible.builtin.raw: "/etc/init.d/ddns enable"
+  changed_when: false
+
+- name: Start/Restart DDNS service
+  ansible.builtin.raw: "/etc/init.d/ddns restart"
+  changed_when: false

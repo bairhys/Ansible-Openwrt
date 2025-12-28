@@ -1,0 +1,43 @@
+---
+- name: Enable color for 'ls' command
+  community.openwrt.lineinfile:
+    path: /etc/profile
+    line: "alias ls='ls --color=auto'"
+    insertafter: EOF
+    state: present
+
+- name: Set colored PS1 prompt (Green User, Blue Path)
+  community.openwrt.lineinfile:
+    path: /etc/profile
+    # This matches any existing export PS1 line and replaces it
+    regexp: '^export PS1='
+    line: "export PS1='\\[\\e[32m\\]\\u@\\h\\[\\e[0m\\]:\\[\\e[34m\\]\\w\\[\\e[0m\\]\\$ '"
+    state: present
+
+- name: Configure Hostname
+  community.openwrt.uci:
+    command: set
+    key: system.@system[0].hostname
+    value: "{{ inventory_hostname }}"
+    autocommit: true
+  register: hostname_change
+
+- name: Set zone name from inventory
+  community.openwrt.uci:
+    command: set
+    key: system.@system[0].zonename
+    value: "{{ timezone_zonename }}"
+    autocommit: true
+  register: tz_zone_change
+
+- name: Set timezone from inventory
+  community.openwrt.uci:
+    command: set
+    key: system.@system[0].timezone
+    value: "{{ timezone_string }}"
+    autocommit: true
+  register: tz_change
+
+- name: reload system for timezone
+  ansible.builtin.raw: /etc/init.d/system reload
+  when: hostname_change.changed or tz_zone_change.changed or tz_change.changed

@@ -1,0 +1,63 @@
+- name: Initial Setup
+  hosts: openwrt_router,openwrt_APs
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - initial_setup
+
+- name: Change WAN DNS Settings
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - wan_dns
+
+- name: Setup Cake Autorate on WAN interface
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - cake_autorate
+
+- name: Configure AP Networks
+  hosts: openwrt_APs
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - ap_network
+
+- name: Configure Wi-Fi
+  hosts: openwrt_router,openwrt_APs
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - wifi
+
+- name: Setup DDNS
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - ddns
+
+- name: Setup WireGuard VPN Server
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - wireguard
+
+- name: Setup Tailscale Subnet Router
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - tailscale

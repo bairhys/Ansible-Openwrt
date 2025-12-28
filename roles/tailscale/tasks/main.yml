@@ -1,0 +1,79 @@
+---
+# Manual Steps Required:
+# Ansible cannot fully automate the security approvals required by the Tailscale platform itself:
+# - Approve Subnet Routes: Go to the Tailscale Admin Console, click the three-dot menu (...) 
+#   for your OpenWrt router, select Edit route settings, and check the box for your subnet.
+# - Client Configuration: On your remote device (phone/laptop), ensure the Tailscale app setting 
+#   "Use Tailscale Subnets" is toggled ON to reach your LAN devices.
+
+- name: Install Tailscale package
+  community.openwrt.opkg:
+    name: tailscale
+    state: present
+
+- name: Check Tailscale connection status
+  ansible.builtin.shell: tailscale status --json
+  register: ts_status_json
+  changed_when: false
+
+- name: Set fact for Tailscale online status
+  ansible.builtin.set_fact:
+    ts_online: "{{ (ts_status_json.stdout | from_json).BackendState == 'Running' }}"
+
+- name: Report status
+  ansible.builtin.debug:
+    msg: "Tailscale is {{ ts_online | ternary('Online', 'Offline') }}"
+
+- name: Configure and Advertise Subnet Routes
+  ansible.builtin.shell: "tailscale up --auth-key={{ vault_tailscale_auth_key }} --advertise-routes={{ tailscale_local_subnet }} --snat-subnet-routes=false"
+  register: tailscale_up
+  when: not ts_online
+
+- name: Create Tailscale Interface in OpenWrt
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set network.tailscale=interface
+      set network.tailscale.proto='unmanaged'
+      set network.tailscale.device='tailscale0'
+  # notify: Restart Network
+  when: not ts_online
+
+- name: Configure Firewall Zone and Rules
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete firewall.tailscale
+      set firewall.tailscale=zone
+      set firewall.tailscale.name='tailscale'
+      set firewall.tailscale.input='ACCEPT'
+      set firewall.tailscale.output='ACCEPT'
+      set firewall.tailscale.forward='ACCEPT'
+      set firewall.tailscale.masq='1'
+      set firewall.tailscale.mtu_fix='1'
+      add_list firewall.tailscale.network='tailscale'
+      delete firewall.lan_to_tailscale
+      set firewall.lan_to_tailscale=forwarding
+      set firewall.lan_to_tailscale.src='lan'
+      set firewall.lan_to_tailscale.dest='tailscale'
+      delete firewall.tailscale_to_lan
+      set firewall.tailscale_to_lan=forwarding
+      set firewall.tailscale_to_lan.src='tailscale'
+      set firewall.tailscale_to_lan.dest='lan'
+  register: tailscale_firewall
+  # notify: Reload Firewall
+  when: not ts_online
+
+- name: Trigger reboot
+  ansible.builtin.shell: "sleep 2 && reboot"
+  async: 1
+  poll: 0
+  when: not ts_online
+
+- name: Wait for the router to come back online
+  ansible.builtin.wait_for_connection:
+    delay: 10       # Don't even try for the first 10 seconds
+    timeout: 300       # Give up after 5 minutes
+  when: not ts_online

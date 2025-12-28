@@ -1,0 +1,19 @@
+---
+# This file needs to be renamed to vault.yml, stored at group_vars/all and encrypted with ansible-vault
+
+# Vault file: store sensitive variables here and encrypt with ansible-vault
+# Example mapping of hostnames to SSH passwords. Replace values then encrypt.
+
+vault_wifi_ssid: "MyHomeNetwork"
+vault_wifi_password: "YourSecurePassword"
+vault_ssh_password: "YourSSHPasswordForAllRouters"
+
+vault_noip_hostname: "your-noip-hostname.ddns.net"
+vault_noip_username: "YourNoIPUsername"
+vault_noip_password: "YourNoIPPassword"
+vault_afraid_hostname: "your-freedns-hostname.afraid.org"
+vault_afraid_username: "YourFreeDNSUsername"
+vault_afraid_password: "YourFreeDNSPassword"
+
+# https://login.tailscale.com/admin/settings/keys
+vault_tailscale_auth_key: "yourAuthKeyForTailscale"
