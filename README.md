@@ -2,7 +2,7 @@
 
 This Ansible playbook provisions an OpenWrt network from factory defaults. It automatically configures:
 
-- Automatic WAN bandwidth management (CAKE Autorate)
+- Automatic WAN bandwidth management ([CAKE Autorate](https://github.com/lynxthecat/cake-autorate))
 - Wi‑Fi with fast client roaming across all OpenWrt devices
 - WireGuard server to access LAN devices with easy QR-code client setup
 - Tailscale client with subnet routing
