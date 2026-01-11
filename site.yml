@@ -61,3 +61,11 @@
   roles:
     - community.openwrt.setup
     - tailscale
+
+- name: Setup Prometheus Exporter
+  hosts: openwrt_router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.setup
+    - prometheus_exporter

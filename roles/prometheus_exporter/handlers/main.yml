@@ -1,0 +1,5 @@
+---
+- name: Restart Prometheus exporter
+  community.openwrt.service:
+    name: prometheus-node-exporter-lua
+    state: restarted

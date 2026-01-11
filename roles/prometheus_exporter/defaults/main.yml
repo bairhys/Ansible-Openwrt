@@ -1,0 +1,9 @@
+---
+# Prometheus node exporter configuration
+prometheus_listen_interface: "lan"
+prometheus_listen_port: "9100"
+prometheus_listen_address: "0.0.0.0"
+
+# Firewall configuration
+prometheus_firewall_enabled: true
+prometheus_firewall_src: "lan"

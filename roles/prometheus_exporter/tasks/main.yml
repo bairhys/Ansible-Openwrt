@@ -1,0 +1,30 @@
+---
+- name: Install Prometheus node exporter packages
+  community.openwrt.opkg:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - "prometheus-node-exporter-lua"
+    - "prometheus-node-exporter-lua-nat_traffic"
+    - "prometheus-node-exporter-lua-netstat"
+    - "prometheus-node-exporter-lua-openwrt"
+    - "prometheus-node-exporter-lua-wifi"
+    - "prometheus-node-exporter-lua-wifi_stations"
+  notify: Restart Prometheus exporter
+
+- name: Configure Prometheus node exporter
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set prometheus-node-exporter-lua.main=prometheus-node-exporter-lua
+      set prometheus-node-exporter-lua.main.listen_interface='{{ prometheus_listen_interface }}'
+      set prometheus-node-exporter-lua.main.listen_port='{{ prometheus_listen_port }}'
+      set prometheus-node-exporter-lua.main.listen_ipv6='0'
+  notify: Restart Prometheus exporter
+
+- name: Enable and start Prometheus node exporter service
+  community.openwrt.service:
+    name: prometheus-node-exporter-lua
+    enabled: true
+    state: started
