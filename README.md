@@ -10,6 +10,7 @@ This Ansible playbook provisions an OpenWrt network from factory defaults. It au
 - Hostnames
 - Timezones
 - WAN DNS servers
+- Prometheus Exporters
 
 ## Network Diagram
 
