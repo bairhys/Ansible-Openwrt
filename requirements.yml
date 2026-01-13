@@ -1,0 +1,4 @@
+collections:
+  # Install from Ansible Galaxy (Default)
+  - name: community.openwrt
+    version: ">=0.4.0"

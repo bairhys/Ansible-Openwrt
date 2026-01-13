@@ -25,7 +25,6 @@ sudo apt update
 sudo apt install -y python3 python3-pip
 pip install --upgrade pip
 pip install ansible
-ansible-galaxy collection install community.openwrt
 ```
 
 Create a vault password file containing only your password on the first line:
@@ -52,6 +51,12 @@ ansible-vault view group_vars/all/vault.yml
 ```
 
 Edit `hosts.yml` for your setup. An example is provided. Change the wifi device paths to suit your device using `cat /etc/config/wireless` otherwise might need to factory reset device to find the correct device paths.
+
+Install the required collections:
+
+```bash
+ansible-galaxy install -r requirements.yml
+```
 
 Run the playbook:
 
