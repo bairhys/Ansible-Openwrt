@@ -1,6 +1,7 @@
 # Ansible
 *.retry
 group_vars/all/vault.yml
+collections/*
 
 # Python
 __pycache__/
