@@ -3,7 +3,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - initial_setup
 
 - name: Change WAN DNS Settings
@@ -11,7 +11,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - wan_dns
 
 - name: Setup Cake Autorate on WAN interface
@@ -19,7 +19,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - cake_autorate
 
 - name: Configure AP Networks
@@ -27,7 +27,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - ap_network
 
 - name: Configure Wi-Fi
@@ -35,7 +35,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - wifi
 
 - name: Setup DDNS
@@ -43,7 +43,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - ddns
 
 - name: Setup WireGuard VPN Server
@@ -51,7 +51,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - wireguard
 
 - name: Setup Tailscale Subnet Router
@@ -59,7 +59,7 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - tailscale
 
 - name: Setup Prometheus Exporter
@@ -67,5 +67,5 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.setup
+    - community.openwrt.init
     - prometheus_exporter

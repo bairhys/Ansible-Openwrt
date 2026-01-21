@@ -22,19 +22,36 @@ On Windows, use WSL (Ubuntu/Debian) to run Ansible. Quick steps in WSL:
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-pip
-pip install --upgrade pip
-pip install ansible
-ansible-galaxy collection install community.openwrt
+sudo apt install -y python3 python3-pip python3-venv
 ```
+
+Clone this repository and change into its directory.
+
+### Setup Python Virtual Environment
+
+Create and activate a Python virtual environment:
+
+On Windows (WSL), use:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+Install Ansible and required dependencies in the virtual environment:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+ansible-galaxy install -r requirements.yml -p collections
+```
+
+### Configure Vault
 
 Create a vault password file containing only your password on the first line:
 
 ```bash
 nano ~/.vaultfile
 ```
-
-Clone this repository and change into its directory.
 
 Copy `vault_example.yml` to `group_vars/all/vault.yml` and update the variables:
 
@@ -51,13 +68,27 @@ ansible-vault edit group_vars/all/vault.yml
 ansible-vault view group_vars/all/vault.yml
 ```
 
+### Configure Hosts
+
 Edit `hosts.yml` for your setup. An example is provided. Change the wifi device paths to suit your device using `cat /etc/config/wireless` otherwise might need to factory reset device to find the correct device paths.
 
-Run the playbook:
+### Run the Playbook
+
+Make sure your virtual environment is activated, then run the playbook:
 
 ```bash
+# Activate the virtual environment (if not already active)
+source venv/bin/activate
+
+# Run the playbook
 export ANSIBLE_CONFIG=./ansible.cfg
 ansible-playbook site.yml
+```
+
+To deactivate the virtual environment when finished:
+
+```bash
+deactivate
 ```
 
 ## Access Points Setup
