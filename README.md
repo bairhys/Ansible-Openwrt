@@ -128,6 +128,7 @@ This Ansible playbook cannot fully automate the security approvals required by t
 ## Wireguard tips
 
 - Setup a Dynamic DNS service
+- Change port from the default 51820 to a different high a random port. A different port can be defined in the vault.
 - To add the Wireguard client to your device with a QR code:
 	- On the main router (192.168.1.1), navigate to Network → Interfaces and click Edit on the Wireguard interface.
 	- With the Wireguard interface settings open, navigate to Peers tab, click Edit for client1

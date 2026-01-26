@@ -4,6 +4,8 @@
 # Vault file: store sensitive variables here and encrypt with ansible-vault
 # Example mapping of hostnames to SSH passwords. Replace values then encrypt.
 
+wireguard_server_port: "51820"
+
 vault_wifi_ssid: "MyHomeNetwork"
 vault_wifi_password: "YourSecurePassword"
 vault_ssh_password: "YourSSHPasswordForAllRouters"
