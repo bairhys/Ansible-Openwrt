@@ -121,6 +121,8 @@ A custom CAKE autorate config file can be placed at `/custom_files/config.primar
 
 ## Tailscale
 
+Tailscale is disabled by default. To enable it, set `tailscale_enabled: true` in your inventory variables.
+
 This Ansible playbook cannot fully automate the security approvals required by the Tailscale platform itself and some manual steps are required:
 - Approve Subnet Routes: Go to the Tailscale Admin Console, click the three-dot menu (...) 
   for your OpenWrt router, select Edit route settings, and check the box for your subnet.

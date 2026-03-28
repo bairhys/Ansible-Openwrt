@@ -59,8 +59,10 @@
   gather_facts: false
 
   roles:
-    - community.openwrt.init
-    - tailscale
+    - role: community.openwrt.init
+      when: (tailscale_enabled | default(false)) | bool
+    - role: tailscale
+      when: (tailscale_enabled | default(false)) | bool
 
 - name: Setup Prometheus Exporter
   hosts: openwrt_router

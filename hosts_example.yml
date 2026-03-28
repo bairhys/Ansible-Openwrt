@@ -7,6 +7,7 @@ all:
 
     # Example LAN subnet
     tailscale_local_subnet: "192.168.1.0/24"
+    tailscale_enabled: false
 
     # Example timezone configuration
     timezone_zonename: Australia/Melbourne
