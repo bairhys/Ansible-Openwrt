@@ -1,6 +1,7 @@
 ---
 - name: Install DDNS packages (ddns-scripts, ca-bundle)
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: "{{ item }}"
     state: present
   with_items:

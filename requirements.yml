@@ -1,3 +1,4 @@
 ---
 collections:
   - name: community.openwrt
+    version: 1.2.0

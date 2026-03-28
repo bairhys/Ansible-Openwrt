@@ -12,6 +12,8 @@ This Ansible playbook provisions an OpenWrt network from factory defaults. It au
 - WAN DNS servers
 - Prometheus Exporters
 
+Tested on OpenWrt 25.12 and 24.10.
+
 ## Network Diagram
 
 ![OpenWrt Network Diagram](network-diagram.svg)
@@ -42,7 +44,7 @@ Install Ansible and required dependencies in the virtual environment:
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
-ansible-galaxy install -r requirements.yml -p collections
+ansible-galaxy collection install -r requirements.yml -p collections
 ```
 
 ### Configure Vault

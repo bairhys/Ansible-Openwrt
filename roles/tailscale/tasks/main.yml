@@ -1,6 +1,7 @@
 ---
 - name: Install Tailscale package
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: tailscale
     state: present
 

@@ -1,6 +1,7 @@
 ---
 - name: Install Prometheus node exporter packages
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: "{{ item }}"
     state: present
   with_items:

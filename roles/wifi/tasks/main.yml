@@ -1,6 +1,7 @@
 ---
 - name: Remove existing wpad variant (mbedtls)
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: "{{ item }}"
     state: absent
   with_items:
@@ -8,14 +9,16 @@
   - "wpad-mesh-wolfssl"
 
 - name: Install fpackages
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: "{{ item }}"
     state: present
   with_items:
   - "luci-app-usteer"
 
 - name: Install full wpad for 802.11r support
-  community.openwrt.opkg:
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
     name: "{{ item }}"
     state: present
   with_items:
