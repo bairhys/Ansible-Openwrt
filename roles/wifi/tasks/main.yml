@@ -26,9 +26,7 @@
   register: wpad_install
 
 - name: Trigger reboot
-  ansible.builtin.shell: "sleep 2 && reboot"
-  async: 1
-  poll: 0
+  ansible.builtin.raw: "nohup sh -c 'sleep 2 && reboot' >/dev/null 2>&1 &"
   when: wpad_install.changed
 
 - name: Wait for the router to come back online
