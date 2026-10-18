@@ -71,3 +71,17 @@
   roles:
     - community.openwrt.init
     - prometheus_exporter
+
+- name: Report OpenWrt versions
+  hosts: openwrt_router,openwrt_APs
+  gather_facts: false
+
+  tasks:
+    - name: Read OpenWrt release
+      ansible.builtin.raw: ". /etc/openwrt_release && echo \"$DISTRIB_DESCRIPTION ($DISTRIB_TARGET)\""
+      register: openwrt_release
+      changed_when: false
+
+    - name: Show OpenWrt version
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ openwrt_release.stdout | trim }}"
