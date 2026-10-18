@@ -12,8 +12,13 @@ wifi_common_iface:
   ft_over_ds: '0'
   ft_psk_generate_local: '1'
   ieee80211r: '1'
+  ieee80211w: '1'
   bss_transition: '1'
   wnm_sleep_mode: '1'
+  wnm_sleep_mode_no_keys: '1'
+  reassociation_deadline: '20000'
+  rrm_neighbor_report: '1'
+  rrm_beacon_report: '1'
   time_advertisement: '2'
   time_zone: "{{ timezone_zonename }}"
   ieee80211k: '1'
