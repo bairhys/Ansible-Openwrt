@@ -92,3 +92,12 @@
 - name: Reload wireless interface
   ansible.builtin.raw: wifi reload
   when: uci_result.changed
+
+- name: Check for radios stuck in setup failure
+  ansible.builtin.raw: "wifi status | grep -c 'retry_setup_failed.: true' || true"
+  register: wifi_stuck
+  changed_when: false
+
+- name: Restart wpad and reload wireless when radios are stuck
+  ansible.builtin.raw: /etc/init.d/wpad restart && sleep 5 && wifi reload
+  when: (wifi_stuck.stdout | trim | int) > 0
