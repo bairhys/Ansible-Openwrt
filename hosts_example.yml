@@ -13,6 +13,11 @@ all:
     timezone_zonename: Australia/Melbourne
     timezone_string: "AEST-10AEDT-11,M10.1.0/02:00:00,M4.1.0/03:00:00"
 
+    # Optional remote syslog (e.g. Loki/Promtail); leave unset to disable
+    # syslog_server: "192.168.1.50"
+    # syslog_port: "514"
+    # syslog_proto: "udp"
+
     # WAN DNS servers
     wan_dns_servers:
       - "1.1.1.1"

@@ -38,6 +38,34 @@
     autocommit: true
   register: tz_change
 
-- name: reload system for timezone
-  ansible.builtin.raw: /etc/init.d/system reload
-  when: hostname_change.changed or tz_zone_change.changed or tz_change.changed
+- name: Forward logs to remote syslog server
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set system.@system[0].log_ip={{ syslog_server }}
+      set system.@system[0].log_port={{ syslog_port | default('514') }}
+      set system.@system[0].log_proto={{ syslog_proto | default('udp') }}
+      set system.@system[0].log_prefix={{ inventory_hostname }}
+  when: (syslog_server | default('')) | length > 0
+  register: syslog_change
+
+- name: Stop forwarding logs when no syslog server is set
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      delete system.@system[0].log_ip
+      delete system.@system[0].log_port
+      delete system.@system[0].log_proto
+      delete system.@system[0].log_prefix
+  when: (syslog_server | default('')) | length == 0
+  register: syslog_remove
+  failed_when: false
+
+- name: reload system for timezone and syslog
+  ansible.builtin.raw: /etc/init.d/system reload && /etc/init.d/log restart
+  when: >-
+    hostname_change.changed or tz_zone_change.changed or tz_change.changed
+    or (syslog_change.changed | default(false))
+    or (syslog_remove.changed | default(false))
