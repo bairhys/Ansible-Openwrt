@@ -15,6 +15,7 @@
     state: present
   with_items:
   - "luci-app-usteer"
+  - "hostapd-utils"
 
 - name: Install full wpad for 802.11r support
   action: community.openwrt.{{ openwrt_package_manager }}
