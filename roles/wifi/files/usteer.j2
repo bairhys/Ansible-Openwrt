@@ -54,7 +54,7 @@ config usteer
         #option remote_node_timeout 10
 
         # Allow rejecting assoc requests for steering purposes (0/1)
-        option assoc_steering 1
+        option assoc_steering 0
 
         # Allow ignoring probe requests for steering purposes (0/1)
         option probe_steering 1
@@ -84,14 +84,14 @@ config usteer
 
         # Retry scanning when roam_scan_tries is exceeded after this timeout (in ms)
         # In case this option is set to 0, the client is kicked instead
-        #option roam_scan_timeout 0
+        option roam_scan_timeout 60000
 
         # Minimum time (ms) between client roaming scan trigger attempts
         #option roam_scan_interval 10000
 
         # Minimum signal-to-noise ratio or signal level (dBm) before attempting to trigger
         # forced client roaming
-        option roam_trigger_snr -75
+        option roam_trigger_snr 0
 
         # Minimum time (ms) between client roaming trigger attempts
         #option roam_trigger_interval 60000
@@ -100,7 +100,7 @@ config usteer
         #option roam_kick_delay 10000
 
         # Minimum signal strength difference until AP steering policy is active
-        option signal_diff_threshold 10
+        option signal_diff_threshold 15
 
         # Initial delay (ms) before responding to probe requests (to allow other APs to see packets as well)
         #option initial_connect_delay 0
@@ -122,11 +122,11 @@ config usteer
 
         # Attempting to steer clients to a higher frequency-band every n ms.
         # A value of 0 disabled band-steering.
-        option band_steering_interval 10000
+        option band_steering_interval 0
 
         # Minimal SNR or absolute signal a device has to maintain over band_steering_interval to be
         # steered to a higher frequency band
-        option band_steering_min_snr -65
+        option band_steering_min_snr -55
 
         # Interval (ms) the device is sent a link-measurement request to help assess
         # the bi-directional link quality. Setting the interval to 0 disables link-measurements.
@@ -150,6 +150,18 @@ config usteer
         # - load_kick_client
         # - signal_kick
         #list event_log_types ''
+        list event_log_types 'probe_req_accept'
+        list event_log_types 'probe_req_deny'
+        list event_log_types 'auth_req_accept'
+        list event_log_types 'auth_req_deny'
+        list event_log_types 'assoc_req_accept'
+        list event_log_types 'assoc_req_deny'
+        list event_log_types 'load_kick_trigger'
+        list event_log_types 'load_kick_reset'
+        list event_log_types 'load_kick_min_clients'
+        list event_log_types 'load_kick_no_client'
+        list event_log_types 'load_kick_client'
+        list event_log_types 'signal_kick'
 
         # List of SSIDs to enable steering on
         #list ssid_list ''
