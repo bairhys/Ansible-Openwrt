@@ -72,6 +72,14 @@
     - community.openwrt.init
     - prometheus_exporter
 
+- name: Setup Prometheus Exporter on APs
+  hosts: openwrt_APs
+  gather_facts: false
+
+  roles:
+    - community.openwrt.init
+    - prometheus_exporter
+
 - name: Report OpenWrt versions
   hosts: openwrt_router,openwrt_APs
   gather_facts: false
