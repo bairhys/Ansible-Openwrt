@@ -1,0 +1,9 @@
+table bridge iot_client_isolation {
+  chain forward {
+    type filter hook forward priority -200; policy accept;
+
+    ether type ip ip saddr 192.168.20.0/24 ip saddr != 192.168.20.1 ip daddr 192.168.20.0/24 ip daddr != 192.168.20.1 counter drop
+    ether type arp arp saddr ip 192.168.20.0/24 arp saddr ip != 192.168.20.1 arp daddr ip 192.168.20.0/24 arp daddr ip != 192.168.20.1 counter drop
+    vlan id 20 ether type ip6 counter drop
+  }
+}

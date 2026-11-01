@@ -153,6 +153,4 @@
   <text x="450" y="667" text-anchor="middle" class="label">IoT Network — VLAN 20 · 192.168.20.0/24</text>
   <text x="190" y="692" text-anchor="middle" class="feature-text">Wi-Fi: dd-wrt2</text>
   <text x="450" y="692" text-anchor="middle" class="feature-text">Gateway / DHCP: 192.168.20.1 · Internet only</text>
-  <text x="710" y="692" text-anchor="middle" class="feature-text">Wired clients tagged VLAN 20</text>
-  <text x="450" y="719" text-anchor="middle" class="feature-text">Client-to-client isolation required on shared network links</text>
 </svg>

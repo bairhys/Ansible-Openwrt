@@ -37,11 +37,11 @@ Every link from the router through access points and switches must carry VLAN 20
 
 ### Strict client isolation
 
-The IoT network is intended to keep each client from reaching any other IoT client. The playbook enables Wi-Fi client isolation on the IoT SSID and configures the router to allow IoT DHCP/DNS and IoT-to-WAN forwarding only. It also blocks IoT clients from the router's management interface; manage OpenWrt through the existing LAN instead. A shared VLAN and router firewall do not block traffic switched directly between devices on that VLAN.
+The IoT network is intended to keep each client from reaching any other IoT client. The playbook enables Wi-Fi client isolation and installs persistent nftables bridge rules on all OpenWrt devices to block peer IPv4/ARP traffic on the IoT subnet and IPv6 forwarding on VLAN 20, while allowing traffic to and from the gateway. This bridge filtering is needed because router firewall rules alone do not see traffic switched directly between clients on the same VLAN. The router allows IoT DHCP/DNS and IoT-to-WAN forwarding only, and blocks IoT clients from its management interface; manage OpenWrt through the existing LAN instead.
 
-To complete strict isolation, configure the managed switch to isolate IoT client-facing ports from one another for VLAN 20 while allowing them to reach the router's gateway port. The AP Wi-Fi isolation setting covers Wi-Fi peers; switch isolation covers traffic between AP uplinks. If these controls are unavailable or disabled, clients may still communicate directly.
+Wi-Fi client isolation covers peers on the same access point; the bridge rules cover clients connected through different access points.
 
-After applying the playbook and external switch settings, verify from clients on different APs that:
+After applying the playbook, verify from clients on different APs that:
 
 1. They obtain an address in `192.168.20.0/24`, with gateway `192.168.20.1`.
 2. They can resolve DNS and reach the internet.

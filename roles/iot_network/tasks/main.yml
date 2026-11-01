@@ -217,3 +217,22 @@
       dest: wan
   when: inventory_hostname in groups['openwrt_router']
   notify: Reload IoT Firewall
+
+- name: Install IoT client-isolation nftables rules
+  community.openwrt.copy:
+    src: iot-client-isolation.nft
+    dest: /etc/iot-client-isolation.nft
+    mode: '0644'
+
+- name: Install IoT client-isolation startup service
+  community.openwrt.copy:
+    src: iot-client-isolation.init
+    dest: /etc/init.d/iot-client-isolation
+    mode: '0755'
+
+- name: Enable and apply IoT client-isolation bridge filter
+  ansible.builtin.raw: /etc/init.d/iot-client-isolation enable && /etc/init.d/iot-client-isolation restart
+
+- name: Verify IoT client-isolation bridge filter is loaded
+  ansible.builtin.raw: nft list table bridge iot_client_isolation
+  changed_when: false
