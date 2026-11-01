@@ -30,6 +30,15 @@
     - community.openwrt.init
     - ap_network
 
+- name: Configure IoT Network
+  hosts: openwrt_router,openwrt_APs
+  gather_facts: false
+  any_errors_fatal: true
+
+  roles:
+    - community.openwrt.init
+    - iot_network
+
 - name: Configure Wi-Fi
   hosts: openwrt_router,openwrt_APs
   gather_facts: false
@@ -93,3 +102,15 @@
     - name: Show OpenWrt version
       ansible.builtin.debug:
         msg: "{{ inventory_hostname }}: {{ openwrt_release.stdout | trim }}"
+
+- name: Ensure all AP Wi-Fi SSIDs are enabled
+  hosts: openwrt_APs
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
+
+  tasks:
+    - name: Enforce enabled AP wireless configuration
+      ansible.builtin.include_role:
+        name: wifi
+        tasks_from: ensure_enabled.yml

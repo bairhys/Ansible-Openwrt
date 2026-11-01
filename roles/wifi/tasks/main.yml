@@ -67,6 +67,7 @@
       set wireless.default_{{ item.device_name }}.device={{ item.device_name }}
       set wireless.default_{{ item.device_name }}.network={{ wifi_common_iface.network }}
       set wireless.default_{{ item.device_name }}.mode={{ wifi_common_iface.mode }}
+      set wireless.default_{{ item.device_name }}.disabled=0
       set wireless.default_{{ item.device_name }}.ssid={{ wifi_common_iface.ssid }}
       set wireless.default_{{ item.device_name }}.encryption={{ wifi_common_iface.encryption }}
       set wireless.default_{{ item.device_name }}.key={{ wifi_common_iface.key }}
@@ -89,9 +90,45 @@
   loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
   register: uci_result
 
+- name: Configure IoT Wi-Fi interfaces
+  community.openwrt.uci:
+    command: section
+    config: wireless
+    type: wifi-iface
+    name: "iot_{{ item.key }}"
+    autocommit: true
+    value:
+      device: "{{ item.key }}"
+      mode: ap
+      network: "{{ wifi_iot_iface.network }}"
+      disabled: '0'
+      ssid: "{{ wifi_iot_iface.ssid }}"
+      encryption: "{{ wifi_iot_iface.encryption }}"
+      key: "{{ wifi_iot_iface.key }}"
+      isolate: "{{ wifi_iot_iface.isolate }}"
+      ft_over_ds: "{{ wifi_iot_iface.ft_over_ds }}"
+      ft_psk_generate_local: "{{ wifi_iot_iface.ft_psk_generate_local }}"
+      ieee80211r: "{{ wifi_iot_iface.ieee80211r }}"
+      ieee80211w: "{{ wifi_iot_iface.ieee80211w }}"
+      mobility_domain: "{{ wifi_iot_iface.mobility_domain }}"
+      nasid: "{{ inventory_hostname | hash('md5') | truncate(12, True, '') }}"
+      ieee80211k: "{{ wifi_iot_iface.ieee80211k }}"
+      time_advertisement: "{{ wifi_iot_iface.time_advertisement }}"
+      time_zone: "{{ wifi_iot_iface.time_zone }}"
+      bss_transition: "{{ wifi_iot_iface.bss_transition }}"
+      wnm_sleep_mode: "{{ wifi_iot_iface.wnm_sleep_mode }}"
+      wnm_sleep_mode_no_keys: "{{ wifi_iot_iface.wnm_sleep_mode_no_keys }}"
+      reassociation_deadline: "{{ wifi_iot_iface.reassociation_deadline }}"
+      rrm_neighbor_report: "{{ wifi_iot_iface.rrm_neighbor_report }}"
+      rrm_beacon_report: "{{ wifi_iot_iface.rrm_beacon_report }}"
+      wmm: "{{ wifi_iot_iface.wmm }}"
+  loop: "{{ wifi_settings | dict2items }}"
+  no_log: true
+  register: iot_wifi_uci_result
+
 - name: Reload wireless interface
   ansible.builtin.raw: wifi reload
-  when: uci_result.changed
+  when: uci_result.changed or iot_wifi_uci_result.changed
 
 - name: Check for radios stuck in setup failure
   ansible.builtin.raw: "wifi status | grep -c 'retry_setup_failed.: true' || true"

@@ -1,0 +1,20 @@
+---
+- name: Enable configured AP radios and SSID interfaces
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set wireless.{{ item.device_name }}.disabled=0
+      set wireless.default_{{ item.device_name }}.disabled=0
+      set wireless.iot_{{ item.device_name }}.disabled=0
+  loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
+
+- name: Reload AP wireless to ensure configured SSIDs are active
+  ansible.builtin.raw: wifi reload
+
+- name: Verify configured AP SSID interfaces are enabled in UCI
+  ansible.builtin.raw: >-
+    test "$(uci -q get wireless.default_{{ item.device_name }}.disabled)" = 0 &&
+    test "$(uci -q get wireless.iot_{{ item.device_name }}.disabled)" = 0
+  loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
+  changed_when: false

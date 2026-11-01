@@ -1,0 +1,18 @@
+---
+iot_vlan_id: 20
+iot_vlan_mode: ""
+iot_vlan_parent_device: eth0
+iot_vlan_device_name: "{{ iot_vlan_parent_device }}.{{ iot_vlan_id }}"
+iot_dsa_bridge_device: br-lan
+iot_dsa_native_ports: []
+iot_dsa_trunk_ports: []
+iot_swconfig_device: switch0
+iot_swconfig_cpu_device: eth0
+iot_swconfig_cpu_port: ""
+iot_swconfig_vlan_index: 3
+iot_swconfig_trunk_ports: []
+iot_gateway: 192.168.20.1
+iot_netmask: 255.255.255.0
+iot_dhcp_start: 100
+iot_dhcp_limit: 150
+iot_dhcp_leasetime: 12h

@@ -1,0 +1,219 @@
+---
+- name: Validate IoT VLAN configuration mode
+  ansible.builtin.assert:
+    that:
+      - iot_vlan_mode in ['dsa', 'swconfig']
+    fail_msg: Set iot_vlan_mode to the verified DSA or swconfig mode for this host.
+
+- name: Validate DSA IoT VLAN port configuration
+  ansible.builtin.assert:
+    that:
+      - iot_dsa_native_ports | length > 0
+      - iot_dsa_trunk_ports | length > 0
+      - iot_dsa_trunk_ports | difference(iot_dsa_native_ports) | length == 0
+    fail_msg: Define all existing DSA LAN ports and only the verified IoT-tagged trunk ports for this host.
+  when: iot_vlan_mode == 'dsa'
+
+- name: Validate swconfig IoT VLAN port configuration
+  ansible.builtin.assert:
+    that:
+      - iot_swconfig_cpu_port | string | length > 0
+      - iot_swconfig_trunk_ports | length > 0
+      - iot_swconfig_vlan_index | int > 0
+    fail_msg: Define the verified swconfig CPU port and IoT-tagged uplink port for this host.
+  when: iot_vlan_mode == 'swconfig'
+
+- name: Remove legacy IoT VLAN device before configuring DSA VLANs
+  community.openwrt.uci:
+    command: absent
+    key: network.iot_vlan
+    autocommit: true
+  when: iot_vlan_mode == 'dsa'
+  notify: Restart IoT Network
+
+- name: Configure swconfig IoT VLAN on the switch and CPU port
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: switch_vlan
+    name: iot_switch_vlan
+    autocommit: true
+    value:
+      device: "{{ iot_swconfig_device }}"
+      vlan: "{{ iot_swconfig_vlan_index }}"
+      vid: "{{ iot_vlan_id }}"
+      ports: "{{ ([iot_swconfig_cpu_port | string ~ 't'] + (iot_swconfig_trunk_ports | map('regex_replace', '$', 't') | list)) | join(' ') }}"
+  when: iot_vlan_mode == 'swconfig'
+  notify: Restart IoT Network
+
+- name: Configure native LAN VLAN on DSA bridge
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: bridge-vlan
+    find:
+      device: "{{ iot_dsa_bridge_device }}"
+      vlan: '1'
+    autocommit: true
+    value:
+      device: "{{ iot_dsa_bridge_device }}"
+      vlan: 1
+      local: true
+      ports: "{{ iot_dsa_native_ports | map('regex_replace', '$', ':u*') | list }}"
+  when: iot_vlan_mode == 'dsa'
+  notify: Restart IoT Network
+
+- name: Configure tagged IoT VLAN on DSA bridge
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: bridge-vlan
+    find:
+      device: "{{ iot_dsa_bridge_device }}"
+      vlan: "{{ iot_vlan_id | string }}"
+    autocommit: true
+    value:
+      device: "{{ iot_dsa_bridge_device }}"
+      vlan: "{{ iot_vlan_id }}"
+      local: true
+      ports: "{{ iot_dsa_trunk_ports | map('regex_replace', '$', ':t') | list }}"
+  when: iot_vlan_mode == 'dsa'
+  notify: Restart IoT Network
+
+- name: Move the existing LAN interface onto its DSA native VLAN
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: lan
+    autocommit: true
+    value:
+      device: "{{ iot_dsa_bridge_device }}.1"
+  when: iot_vlan_mode == 'dsa'
+  notify: Restart IoT Network
+
+- name: Configure swconfig VLAN device for IoT
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: device
+    name: iot_vlan
+    autocommit: true
+    value:
+      name: "{{ iot_vlan_device_name }}"
+      type: 8021q
+      ifname: "{{ iot_swconfig_cpu_device }}"
+      vid: "{{ iot_vlan_id }}"
+  when: iot_vlan_mode == 'swconfig'
+  notify: Restart IoT Network
+
+- name: Configure IoT interface on the router
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: iot
+    autocommit: true
+    value:
+      proto: static
+      device: "{{ (iot_dsa_bridge_device ~ '.' ~ iot_vlan_id) if iot_vlan_mode == 'dsa' else iot_vlan_device_name }}"
+      ipaddr: "{{ iot_gateway }}"
+      netmask: "{{ iot_netmask }}"
+      ip6assign: '0'
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Restart IoT Network
+
+- name: Configure IoT interface on access points
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: iot
+    autocommit: true
+    value:
+      proto: none
+      device: "{{ (iot_dsa_bridge_device ~ '.' ~ iot_vlan_id) if iot_vlan_mode == 'dsa' else iot_vlan_device_name }}"
+  when: inventory_hostname in groups['openwrt_APs']
+  notify: Restart IoT Network
+
+- name: Configure IoT DHCP and disable unused IPv6 services
+  community.openwrt.uci:
+    command: section
+    config: dhcp
+    type: dhcp
+    name: iot
+    autocommit: true
+    value:
+      interface: iot
+      start: "{{ iot_dhcp_start }}"
+      limit: "{{ iot_dhcp_limit }}"
+      leasetime: "{{ iot_dhcp_leasetime }}"
+      ra: disabled
+      dhcpv6: disabled
+      ndp: disabled
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Restart IoT DHCP
+
+- name: Configure IoT firewall zone
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: zone
+    name: iot
+    autocommit: true
+    value:
+      name: iot
+      network:
+        - iot
+      input: REJECT
+      output: ACCEPT
+      forward: REJECT
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall
+
+- name: Allow IoT clients to use router DNS
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: iot_dns
+    autocommit: true
+    value:
+      name: Allow-IoT-DNS
+      src: iot
+      proto:
+        - tcp
+        - udp
+      dest_port: '53'
+      target: ACCEPT
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall
+
+- name: Allow IoT clients to obtain DHCP leases
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: iot_dhcp
+    autocommit: true
+    value:
+      name: Allow-IoT-DHCP
+      src: iot
+      proto: udp
+      dest_port: '67'
+      target: ACCEPT
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall
+
+- name: Allow IoT clients to access the internet
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: forwarding
+    name: iot_wan
+    autocommit: true
+    value:
+      src: iot
+      dest: wan
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall

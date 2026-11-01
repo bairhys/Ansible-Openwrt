@@ -9,6 +9,13 @@ all:
     tailscale_local_subnet: "192.168.1.0/24"
     tailscale_enabled: false
 
+    # IoT clients use a separate tagged VLAN; configure the hardware-specific
+    # port settings per host below before applying the playbook.
+    iot_vlan_id: 20
+    iot_vlan_parent_device: br-lan
+    iot_gateway: 192.168.20.1
+    iot_netmask: 255.255.255.0
+
     # Example timezone configuration
     timezone_zonename: Australia/Melbourne
     timezone_string: "AEST-10AEDT-11,M10.1.0/02:00:00,M4.1.0/03:00:00"
@@ -30,6 +37,8 @@ all:
       hosts:
         router-main:
           ansible_host: 192.168.1.1
+          # Set iot_vlan_mode and list every existing native LAN port.
+          # Set trunk ports only after confirming the physical uplink(s).
           # Per-host Wi‑Fi settings
           wifi_settings:
             radio0:
@@ -47,6 +56,7 @@ all:
       hosts:
         ap-bedroom:
           ansible_host: 192.168.1.2
+          # Set iot_vlan_mode and hardware-specific port settings for this AP.
           # Per-host Wi‑Fi settings for AP
           wifi_settings:
             radio0:

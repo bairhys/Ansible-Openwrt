@@ -18,6 +18,36 @@ Tested on OpenWrt 25.12 and 24.10.
 
 ![OpenWrt Network Diagram](network-diagram.svg)
 
+## IoT network
+
+The playbook adds a separate IoT network to the router and every configured access point:
+
+- The IoT SSID is configured by `vault_iot_wifi_ssid`; the existing LAN SSID remains separate.
+- VLAN: `20`
+- IPv4 subnet and gateway: `192.168.20.0/24`, `192.168.20.1`
+- DHCP, DNS, and routing are provided by the main OpenWrt router.
+- IoT clients can reach the internet, but the router firewall does not forward IoT traffic to the LAN.
+- The IoT SSID name and password are configured through `vault_iot_wifi_ssid` and `vault_iot_wifi_password` in `group_vars/all/vault.yml`. Add both variables to your encrypted vault before running the playbook; example values are in `vault_example.yml`.
+- It shares the existing Wi-Fi radio settings, country, timezone, and 802.11r/k/v roaming configuration. Its SSID, network, and password remain separate.
+- At the end of every playbook run, the configured AP radios and both LAN and IoT SSID interfaces are explicitly enabled and wireless is reloaded. This briefly interrupts Wi-Fi while each AP applies the enabled state.
+
+The role follows the [OpenWrt VLAN/switch configuration guide](https://openwrt.org/docs/guide-user/network/vlan/switch_configuration). On DSA devices, it configures VLAN 1 as the existing untagged LAN, moves the LAN interface to `br-lan.1`, and configures VLAN 20 as tagged on the verified ports listed in `iot_dsa_trunk_ports`, with the local bridge port enabled. Set `iot_vlan_mode: dsa`, list all existing LAN ports in `iot_dsa_native_ports`, and list only physically verified IoT trunk/uplink ports in `iot_dsa_trunk_ports` in `hosts.yml`. On legacy swconfig devices, the role configures VLAN 20 on the switch CPU port and verified physical trunk ports; specify the switch, CPU device/port, unique switch VLAN index, and uplink port list. VLAN 20 avoids the TL-WDR4300's existing use of switch VLAN 2 for WAN. The IoT network tasks fail before changing any host if its mode or required port mappings are missing. Verify that VLAN 20 and `192.168.20.0/24` are otherwise unused.
+
+Every link from the router through access points and switches must carry VLAN 20 tagged, while preserving the existing LAN's untagged/native traffic. Do not configure VLAN 20 on the WAN link.
+
+### Strict client isolation
+
+The IoT network is intended to keep each client from reaching any other IoT client. The playbook enables Wi-Fi client isolation on the IoT SSID and configures the router to allow IoT DHCP/DNS and IoT-to-WAN forwarding only. It also blocks IoT clients from the router's management interface; manage OpenWrt through the existing LAN instead. A shared VLAN and router firewall do not block traffic switched directly between devices on that VLAN.
+
+To complete strict isolation, configure the managed switch to isolate IoT client-facing ports from one another for VLAN 20 while allowing them to reach the router's gateway port. The AP Wi-Fi isolation setting covers Wi-Fi peers; switch isolation covers traffic between AP uplinks. If these controls are unavailable or disabled, clients may still communicate directly.
+
+After applying the playbook and external switch settings, verify from clients on different APs that:
+
+1. They obtain an address in `192.168.20.0/24`, with gateway `192.168.20.1`.
+2. They can resolve DNS and reach the internet.
+3. They cannot reach another IoT Wi-Fi client.
+4. They cannot reach a host on the existing LAN.
+
 ## Install Ansible and run the playbook
 
 On Windows, use WSL (Ubuntu/Debian) to run Ansible. Quick steps in WSL:

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 650">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 760">
   <defs>
     <style>
       .title { font: bold 20px sans-serif; fill: #333; }
@@ -54,7 +54,7 @@
     <text x="450" y="238" text-anchor="middle" class="sublabel" fill="white">192.168.1.1</text>
     <text x="450" y="253" text-anchor="middle" class="sublabel" fill="white">2.4GHz Ch 1</text>
     <text x="450" y="268" text-anchor="middle" class="sublabel" fill="white">5GHz Ch 36</text>
-    <text x="450" y="283" text-anchor="middle" class="sublabel" fill="white">CAKE Autorate</text>
+    <text x="450" y="283" text-anchor="middle" class="sublabel" fill="white">dd-wrt + dd-wrt2</text>
   </g>
   
   <!-- WAN Connection -->
@@ -147,4 +147,12 @@
   
   <!-- VPN connection -->
   <path d="M 450 90 Q 580 90 700 150 Q 740 180 755 565" class="vpn-connection"/>
+
+  <!-- IoT network -->
+  <rect x="55" y="645" width="790" height="95" rx="8" class="feature-box"/>
+  <text x="450" y="667" text-anchor="middle" class="label">IoT Network — VLAN 20 · 192.168.20.0/24</text>
+  <text x="190" y="692" text-anchor="middle" class="feature-text">Wi-Fi: dd-wrt2</text>
+  <text x="450" y="692" text-anchor="middle" class="feature-text">Gateway / DHCP: 192.168.20.1 · Internet only</text>
+  <text x="710" y="692" text-anchor="middle" class="feature-text">Wired clients tagged VLAN 20</text>
+  <text x="450" y="719" text-anchor="middle" class="feature-text">Client-to-client isolation required on shared network links</text>
 </svg>

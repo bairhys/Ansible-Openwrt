@@ -24,3 +24,25 @@ wifi_common_iface:
   ieee80211k: '1'
   mobility_domain: abcd
   wmm: '1'
+
+wifi_iot_iface:
+  ssid: "{{ vault_iot_wifi_ssid }}"
+  key: "{{ vault_iot_wifi_password }}"
+  encryption: "{{ wifi_common_iface.encryption }}"
+  network: iot
+  isolate: '1'
+  ft_over_ds: "{{ wifi_common_iface.ft_over_ds }}"
+  ft_psk_generate_local: "{{ wifi_common_iface.ft_psk_generate_local }}"
+  ieee80211r: "{{ wifi_common_iface.ieee80211r }}"
+  ieee80211w: "{{ wifi_common_iface.ieee80211w }}"
+  mobility_domain: "{{ wifi_common_iface.mobility_domain }}"
+  ieee80211k: "{{ wifi_common_iface.ieee80211k }}"
+  time_advertisement: "{{ wifi_common_iface.time_advertisement }}"
+  time_zone: "{{ wifi_common_iface.time_zone }}"
+  bss_transition: "{{ wifi_common_iface.bss_transition }}"
+  wnm_sleep_mode: "{{ wifi_common_iface.wnm_sleep_mode }}"
+  wnm_sleep_mode_no_keys: "{{ wifi_common_iface.wnm_sleep_mode_no_keys }}"
+  reassociation_deadline: "{{ wifi_common_iface.reassociation_deadline }}"
+  rrm_neighbor_report: "{{ wifi_common_iface.rrm_neighbor_report }}"
+  rrm_beacon_report: "{{ wifi_common_iface.rrm_beacon_report }}"
+  wmm: "{{ wifi_common_iface.wmm }}"

@@ -1,0 +1,9 @@
+---
+- name: Restart IoT Network
+  ansible.builtin.raw: /etc/init.d/network restart
+
+- name: Restart IoT DHCP
+  ansible.builtin.raw: /etc/init.d/dnsmasq restart && /etc/init.d/odhcpd restart
+
+- name: Reload IoT Firewall
+  ansible.builtin.raw: /etc/init.d/firewall reload

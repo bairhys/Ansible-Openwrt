@@ -8,6 +8,8 @@ wireguard_server_port: "51820"
 
 vault_wifi_ssid: "MyHomeNetwork"
 vault_wifi_password: "YourSecurePassword"
+vault_iot_wifi_ssid: "MyHomeNetwork_IoT"
+vault_iot_wifi_password: "YourSeparateIoTPassword"
 vault_ssh_password: "YourSSHPasswordForAllRouters"
 
 vault_noip_hostname: "your-noip-hostname.ddns.net"
