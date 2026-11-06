@@ -12,6 +12,7 @@ all:
     # IoT clients use a separate tagged VLAN; configure the hardware-specific
     # port settings per host below before applying the playbook.
     iot_vlan_id: 20
+    iot_strict_client_isolation: true
     iot_vlan_parent_device: br-lan
     iot_gateway: 192.168.20.1
     iot_netmask: 255.255.255.0

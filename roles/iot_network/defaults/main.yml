@@ -1,5 +1,6 @@
 ---
 iot_vlan_id: 20
+iot_strict_client_isolation: true
 iot_vlan_mode: ""
 iot_vlan_parent_device: eth0
 iot_vlan_device_name: "{{ iot_vlan_parent_device }}.{{ iot_vlan_id }}"

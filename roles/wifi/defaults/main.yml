@@ -30,7 +30,7 @@ wifi_iot_iface:
   key: "{{ vault_iot_wifi_password }}"
   encryption: "{{ wifi_common_iface.encryption }}"
   network: iot
-  isolate: '1'
+  isolate: "{{ '1' if (iot_strict_client_isolation | default(true) | bool) else '0' }}"
   ft_over_ds: "{{ wifi_common_iface.ft_over_ds }}"
   ft_psk_generate_local: "{{ wifi_common_iface.ft_psk_generate_local }}"
   ieee80211r: "{{ wifi_common_iface.ieee80211r }}"

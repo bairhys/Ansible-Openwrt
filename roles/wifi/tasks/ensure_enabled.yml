@@ -7,6 +7,7 @@
       set wireless.{{ item.device_name }}.disabled=0
       set wireless.default_{{ item.device_name }}.disabled=0
       set wireless.iot_{{ item.device_name }}.disabled=0
+      set wireless.iot_{{ item.device_name }}.isolate={{ wifi_iot_iface.isolate }}
   loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
 
 - name: Reload AP wireless to ensure configured SSIDs are active

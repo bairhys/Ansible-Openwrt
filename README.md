@@ -37,7 +37,13 @@ Every link from the router through access points and switches must carry VLAN 20
 
 ### Strict client isolation
 
-The IoT network is intended to keep each client from reaching any other IoT client. The playbook enables Wi-Fi client isolation and installs persistent nftables bridge rules on all OpenWrt devices to block peer IPv4/ARP traffic on the IoT subnet and IPv6 forwarding on VLAN 20, while allowing traffic to and from the gateway. This bridge filtering is needed because router firewall rules alone do not see traffic switched directly between clients on the same VLAN. The router allows IoT DHCP/DNS and IoT-to-WAN forwarding only, and blocks IoT clients from its management interface; manage OpenWrt through the existing LAN instead.
+Strict IoT client isolation is controlled by `iot_strict_client_isolation` under `all.vars` in `hosts.yml` (default: `true`):
+
+```yaml
+iot_strict_client_isolation: true
+```
+
+When enabled, the playbook enables Wi-Fi client isolation and installs persistent nftables bridge rules on all OpenWrt devices to block peer IPv4/ARP traffic on the IoT subnet and IPv6 forwarding on VLAN 20, while allowing traffic to and from the gateway. This bridge filtering is needed because router firewall rules alone do not see traffic switched directly between clients on the same VLAN. Set the value to `false` to remove the bridge rules and disable Wi-Fi client isolation; clients on the IoT network will then be able to communicate with each other. The router allows IoT DHCP/DNS and IoT-to-WAN forwarding only, and blocks IoT clients from its management interface; manage OpenWrt through the existing LAN instead.
 
 Wi-Fi client isolation covers peers on the same access point; the bridge rules cover clients connected through different access points.
 

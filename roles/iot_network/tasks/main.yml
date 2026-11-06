@@ -223,16 +223,31 @@
     src: iot-client-isolation.nft
     dest: /etc/iot-client-isolation.nft
     mode: '0644'
+  when: iot_strict_client_isolation | bool
 
 - name: Install IoT client-isolation startup service
   community.openwrt.copy:
     src: iot-client-isolation.init
     dest: /etc/init.d/iot-client-isolation
     mode: '0755'
+  when: iot_strict_client_isolation | bool
 
 - name: Enable and apply IoT client-isolation bridge filter
   ansible.builtin.raw: /etc/init.d/iot-client-isolation enable && /etc/init.d/iot-client-isolation restart
+  when: iot_strict_client_isolation | bool
 
 - name: Verify IoT client-isolation bridge filter is loaded
   ansible.builtin.raw: nft list table bridge iot_client_isolation
   changed_when: false
+  when: iot_strict_client_isolation | bool
+
+- name: Disable and remove IoT client-isolation bridge filter
+  ansible.builtin.raw: >-
+    if [ -x /etc/init.d/iot-client-isolation ]; then
+      /etc/init.d/iot-client-isolation stop &&
+      /etc/init.d/iot-client-isolation disable;
+    fi;
+    if nft list table bridge iot_client_isolation >/dev/null 2>&1; then
+      nft delete table bridge iot_client_isolation;
+    fi
+  when: not (iot_strict_client_isolation | bool)
