@@ -1,0 +1,5 @@
+---
+- name: Restart iperf3 server
+  community.openwrt.service:
+    name: iperf3
+    state: restarted

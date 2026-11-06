@@ -6,6 +6,14 @@
     - community.openwrt.init
     - initial_setup
 
+- name: Setup iperf3 Server
+  hosts: Router
+  gather_facts: false
+
+  roles:
+    - community.openwrt.init
+    - iperf_server
+
 - name: Change WAN DNS Settings
   hosts: openwrt_router
   gather_facts: false

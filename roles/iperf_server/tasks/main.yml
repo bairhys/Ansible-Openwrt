@@ -1,0 +1,19 @@
+---
+- name: Install iperf3 package
+  action: community.openwrt.{{ openwrt_package_manager }}
+  args:
+    name: iperf3
+    state: present
+
+- name: Install iperf3 server service
+  community.openwrt.copy:
+    src: iperf3
+    dest: /etc/init.d/iperf3
+    mode: '0755'
+  notify: Restart iperf3 server
+
+- name: Enable and start iperf3 server
+  community.openwrt.service:
+    name: iperf3
+    enabled: true
+    state: started
