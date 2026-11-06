@@ -7,6 +7,8 @@
   with_items:
   - "bash"
   - "luci-app-sqm"
+  - "sqm-scripts"
+  - "kmod-sched-cake"
   - "fping"
 
 - name: Upload sqm config to device

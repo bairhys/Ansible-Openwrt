@@ -30,3 +30,5 @@ hosts.yml
 vault.yml
 venv/*
 collections/*
+roles/cake_autorate/files/config.primary.sh
+roles/cake_autorate/files/sqm

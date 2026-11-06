@@ -151,9 +151,19 @@ By default, OpenWrt devices share the same factory default settings. This is fin
 
 Save and apply the changes, then reconnect the device to your main network.
 
-## CAKE Autorate note
+## CAKE Autorate
 
-A custom CAKE autorate config file can be placed at `/custom_files/config.primary.sh` which are git ignored. Use Unix line endings.
+The `cake_autorate` role installs SQM and cake-autorate on the router. SQM's
+`interface` must be the actual WAN netdevice, not necessarily the logical
+OpenWrt interface name. Check it with `ifstatus wan` and confirm the applied
+qdiscs with `tc qdisc ls`. cake-autorate's `ul_if` must match that device, and
+`dl_if` must match SQM's download IFB device (commonly `ifb4<wan-device>`).
+
+For the GL-MT6000 at `192.168.1.1`, OpenWrt reports logical `wan` on device
+`eth1`, so the matching settings are `interface=eth1`, `ul_if=eth1`, and
+`dl_if=ifb4eth1`. Keep these aligned if the WAN device changes. A custom
+cake-autorate config can be placed at `custom_files/config.primary.sh`;
+`custom_files/` is git-ignored. Use Unix line endings.
 
 ## Tailscale
 
