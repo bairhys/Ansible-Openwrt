@@ -7,7 +7,7 @@
     - initial_setup
 
 - name: Setup iperf3 Server
-  hosts: Router
+  hosts: openwrt_router
   gather_facts: false
 
   roles:
