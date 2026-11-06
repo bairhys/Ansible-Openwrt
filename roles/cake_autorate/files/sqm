@@ -1,7 +1,7 @@
 
 config queue 'eth1'
         option enabled '1'
-        option interface 'wan'
+        option interface 'eth1'
         option download '200000'
         option upload '10000'
         option qdisc 'cake'
@@ -9,4 +9,3 @@ config queue 'eth1'
         option linklayer 'none'
         option debug_logging '0'
         option verbosity '5'
-

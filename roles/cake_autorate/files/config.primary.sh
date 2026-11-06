@@ -12,8 +12,8 @@
 ### sent by this instance of cake-autorate actually travel through these interfaces.
 ### See ping_extra_args and ping_prefix_string
 
-dl_if=ifb4wan # download interface
-ul_if=wan     # upload interface
+dl_if=ifb4eth1 # download interface
+ul_if=eth1     # upload interface
 
 # Set either of the below to 0 to adjust one direction only
 # or alternatively set both to 0 to simply use cake-autorate to monitor a connection
