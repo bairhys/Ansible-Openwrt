@@ -4,7 +4,6 @@ unrestricted_vlan_id: 30
 unrestricted_swconfig_vlan_index: 4
 unrestricted_gateway: 192.168.30.1
 unrestricted_netmask: 255.255.255.0
-unrestricted_ssid: ExampleUnrestricted
 unrestricted_dhcp_start: 100
 unrestricted_dhcp_limit: 150
 unrestricted_dhcp_leasetime: 12h
