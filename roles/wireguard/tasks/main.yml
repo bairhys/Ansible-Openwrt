@@ -73,7 +73,6 @@
       set firewall.Wireguard.masq='1'
       set firewall.Wireguard.mtu_fix='1'
       add_list firewall.Wireguard.network='Wireguard'
-      add_list firewall.Wireguard.network='lan'
 
       delete firewall.Wireguard_to_wan
       set firewall.Wireguard_to_WAN=forwarding

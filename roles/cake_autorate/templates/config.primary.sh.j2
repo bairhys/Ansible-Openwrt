@@ -1,0 +1,4 @@
+{{ lookup('ansible.builtin.file', custom_cake_config | default(role_path ~ '/files/config.primary.sh'), rstrip=False) | regex_replace('(?m)^(ul_if|dl_if)=.*\n?', '') }}
+# Managed selective-shaping interfaces; retain all other custom autorate settings.
+ul_if={{ cake_upload_ifb }}
+dl_if={{ cake_download_ifb }}

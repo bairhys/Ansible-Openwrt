@@ -1,0 +1,87 @@
+---
+- name: Install selective shaping helpers
+  community.openwrt.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: '0755'
+  loop:
+    - {src: selective-cake, dest: /usr/lib/sqm/selective-cake}
+    - {src: selective_cake.qos, dest: /usr/lib/sqm/selective_cake.qos}
+    - {src: selective-cake-firewall, dest: /etc/sqm/selective-cake-firewall}
+    - {src: 95-selective-cake, dest: /etc/hotplug.d/iface/95-selective-cake}
+    - {src: 95-selective-cake, dest: /etc/hotplug.d/net/95-selective-cake}
+  register: selective_helpers
+
+- name: Render selective shaper configuration
+  community.openwrt.template:
+    src: selective-cake.conf.j2
+    dest: /etc/sqm/selective-cake.conf
+    mode: '0644'
+  register: selective_config
+
+- name: Install persistent fw4 packet classification
+  community.openwrt.template:
+    src: selective-cake.nft.j2
+    dest: /etc/nftables.d/30-selective-cake.nft
+    mode: '0644'
+  register: selective_nft
+
+- name: Disable flow offloading
+  community.openwrt.uci:
+    command: batch
+    autocommit: true
+    value: |
+      set firewall.@defaults[0].flow_offloading='0'
+      set firewall.@defaults[0].flow_offloading_hw='0'
+  register: selective_offload
+
+- name: Refresh traffic filters after every firewall reload
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: include
+    name: selective_cake_refresh
+    autocommit: true
+    value:
+      type: script
+      path: /etc/sqm/selective-cake-firewall
+      fw4_compatible: '1'
+  register: selective_include
+
+- name: Validate and reload firewall classification
+  ansible.builtin.raw: fw4 check && /etc/init.d/firewall reload
+  when: selective_nft.changed or selective_offload.changed or selective_include.changed
+
+- name: Render replacement SQM configuration without activating it
+  community.openwrt.template:
+    src: sqm.j2
+    dest: /etc/sqm/selective-sqm.config
+    mode: '0644'
+  register: selective_sqm
+
+- name: Check whether selective shaping needs migration or restart
+  ansible.builtin.raw: >-
+    cmp -s /etc/sqm/selective-sqm.config /etc/config/sqm &&
+    test -f /var/run/selective-cake/enabled &&
+    tc qdisc show dev {{ cake_upload_ifb | quote }} | grep -q 'qdisc cake ' &&
+    tc qdisc show dev {{ cake_download_ifb | quote }} | grep -q 'qdisc cake '
+  changed_when: false
+  failed_when: false
+  register: selective_running
+
+- name: Stop old WAN shaping before activating the replacement
+  ansible.builtin.raw: >-
+    /etc/init.d/cake-autorate stop;
+    /etc/init.d/sqm stop
+  when: selective_running.rc != 0 or selective_helpers.changed or selective_config.changed or selective_sqm.changed
+
+- name: Activate and start selective SQM
+  ansible.builtin.raw: >-
+    cp /etc/sqm/selective-sqm.config /etc/config/sqm &&
+    /etc/init.d/sqm enable && /etc/init.d/sqm start &&
+    test -f /var/run/selective-cake/enabled
+  when: selective_running.rc != 0 or selective_helpers.changed or selective_config.changed or selective_sqm.changed
+
+- name: Refresh filters for all currently present devices
+  ansible.builtin.raw: /usr/lib/sqm/selective-cake refresh
+  changed_when: false

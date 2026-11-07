@@ -67,7 +67,7 @@
   when: not ts_online
 
 - name: Wait for the router to come back online
-  ansible.builtin.wait_for_connection:
+  openwrt_wait_for_connection:
     delay: 10       # Don't even try for the first 10 seconds
     timeout: 300       # Give up after 5 minutes
   when: not ts_online

@@ -7,6 +7,7 @@
       set wireless.{{ item.device_name }}.disabled=0
       set wireless.default_{{ item.device_name }}.disabled=0
       set wireless.iot_{{ item.device_name }}.disabled=0
+      set wireless.unrestricted_{{ item.device_name }}.disabled=0
       set wireless.iot_{{ item.device_name }}.isolate={{ wifi_iot_iface.isolate }}
   loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
 
@@ -16,6 +17,7 @@
 - name: Verify configured AP SSID interfaces are enabled in UCI
   ansible.builtin.raw: >-
     test "$(uci -q get wireless.default_{{ item.device_name }}.disabled)" = 0 &&
-    test "$(uci -q get wireless.iot_{{ item.device_name }}.disabled)" = 0
+    test "$(uci -q get wireless.iot_{{ item.device_name }}.disabled)" = 0 &&
+    test "$(uci -q get wireless.unrestricted_{{ item.device_name }}.disabled)" = 0
   loop: "{{ wifi_settings | dict2items(key_name='device_name', value_name='device_config') }}"
   changed_when: false

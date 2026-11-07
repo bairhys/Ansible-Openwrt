@@ -1,0 +1,89 @@
+---
+- name: Validate an existing rollback before resuming a failed deployment
+  ansible.builtin.raw: |
+    set -eu
+    armed=/root/network-change-rollback.armed
+    if [ ! -f "$armed" ]; then
+      echo new
+      exit 0
+    fi
+    deadline=$(cat "$armed")
+    case "$deadline" in
+      ''|*[!0-9]*) echo 'Rollback deadline is invalid; refusing to overwrite its backup.' >&2; exit 1 ;;
+    esac
+    if [ "$deadline" -le "$(( $(date +%s) + 60 ))" ]; then
+      echo 'Rollback is expired or due within 60 seconds. Let it finish before retrying; its backup has been preserved.' >&2
+      exit 1
+    fi
+    if [ ! -r /root/network-change-rollback.archive ]; then
+      echo 'Armed rollback has no archive pointer; manual recovery is required.' >&2
+      exit 1
+    fi
+    archive=$(cat /root/network-change-rollback.archive)
+    case "$archive" in
+      /root/network-backup-*.tar.gz) ;;
+      *) echo 'Rollback archive path is invalid; refusing to replace it.' >&2; exit 1 ;;
+    esac
+    if [ ! -r "$archive" ] || ! tar -tzf "$archive" >/dev/null 2>&1; then
+      echo 'Rollback archive is missing or corrupt; refusing to replace it.' >&2
+      exit 1
+    fi
+    if ! /etc/init.d/network-change-rollback status >/dev/null 2>&1; then
+      echo 'Rollback is armed but its service is not running; manual recovery is required.' >&2
+      exit 1
+    fi
+    echo reuse
+  register: network_rollback_state
+  changed_when: false
+
+- name: Report reuse of the original pre-change rollback snapshot
+  ansible.builtin.debug:
+    msg: Reusing the original rollback archive from the previous run; its timer will be renewed for thirty minutes.
+  when: network_rollback_state.stdout | trim == 'reuse'
+
+- name: Back up configuration and shaper files with restricted permissions
+  ansible.builtin.raw: |
+    set -eu
+    umask 077
+    backup="/root/network-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
+    cd /
+    paths=''
+    for path in etc/config etc/hotplug.d etc/nftables.d etc/rc.d etc/init.d etc/sqm usr/lib/sqm root/cake-autorate; do
+      [ ! -d "$path" ] || paths="$paths $path"
+    done
+    tar -czf "$backup" $paths
+    printf '%s\n' "$backup" > /root/network-change-rollback.archive
+    printf '%s\n' "$backup"
+  register: network_backup
+  when: network_rollback_state.stdout | trim == 'new'
+
+- name: Install persistent rollback worker
+  community.openwrt.copy:
+    src: network-change-rollback
+    dest: /usr/lib/network-change-rollback
+    mode: '0700'
+  when: network_rollback_state.stdout | trim == 'new'
+
+- name: Install rollback service
+  community.openwrt.copy:
+    src: network-change-rollback.init
+    dest: /etc/init.d/network-change-rollback
+    mode: '0755'
+  when: network_rollback_state.stdout | trim == 'new'
+
+- name: Arm rollback for thirty minutes including across reboots
+  ansible.builtin.raw: |
+    set -eu
+    umask 077
+    # Never renew a timer that may already have started restoring the archive.
+    if [ -f /root/network-change-rollback.armed ]; then
+      deadline=$(cat /root/network-change-rollback.armed)
+      if [ "$deadline" -le "$(( $(date +%s) + 60 ))" ]; then
+        echo 'Rollback is now due; let it finish before retrying.' >&2
+        exit 1
+      fi
+    fi
+    echo "$(( $(date +%s) + 1800 ))" > /root/network-change-rollback.armed.tmp
+    mv /root/network-change-rollback.armed.tmp /root/network-change-rollback.armed
+    /etc/init.d/network-change-rollback enable
+    /etc/init.d/network-change-rollback restart

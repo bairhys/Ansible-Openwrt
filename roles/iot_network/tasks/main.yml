@@ -218,6 +218,35 @@
   when: inventory_hostname in groups['openwrt_router']
   notify: Reload IoT Firewall
 
+- name: Allow LAN-initiated connections to IoT
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: forwarding
+    name: lan_to_iot
+    autocommit: true
+    value:
+      src: lan
+      dest: iot
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall
+
+- name: Block IoT-initiated connections to LAN
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: iot_block_lan
+    autocommit: true
+    value:
+      name: Block-IoT-to-lan
+      src: iot
+      dest: lan
+      proto: all
+      target: REJECT
+  when: inventory_hostname in groups['openwrt_router']
+  notify: Reload IoT Firewall
+
 - name: Install IoT client-isolation nftables rules
   community.openwrt.copy:
     src: iot-client-isolation.nft

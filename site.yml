@@ -1,5 +1,26 @@
+---
+- import_playbook: reachability.yml
+
+- name: Validate unrestricted network before any device changes
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Validate credentials and VLAN configuration
+      ansible.builtin.import_role:
+        name: unrestricted_network
+        tasks_from: preflight.yml
+
+- name: Back up and arm automatic network rollback
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - community.openwrt.init
+    - network_rollback
+
 - name: Initial Setup
-  hosts: openwrt_router,openwrt_APs
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -7,7 +28,7 @@
     - initial_setup
 
 - name: Setup iperf3 Server
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -15,23 +36,15 @@
     - iperf_server
 
 - name: Change WAN DNS Settings
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
     - community.openwrt.init
     - wan_dns
 
-- name: Setup Cake Autorate on WAN interface
-  hosts: openwrt_router
-  gather_facts: false
-
-  roles:
-    - community.openwrt.init
-    - cake_autorate
-
 - name: Configure AP Networks
-  hosts: openwrt_APs
+  hosts: openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -39,7 +52,7 @@
     - ap_network
 
 - name: Configure IoT Network
-  hosts: openwrt_router,openwrt_APs
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
   any_errors_fatal: true
 
@@ -47,16 +60,43 @@
     - community.openwrt.init
     - iot_network
 
-- name: Configure Wi-Fi
-  hosts: openwrt_router,openwrt_APs
+- name: Configure unrestricted network on the router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
+  any_errors_fatal: true
+  roles:
+    - community.openwrt.init
+    - unrestricted_network
+
+- name: Configure unrestricted network on access points
+  hosts: openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
+  roles:
+    - community.openwrt.init
+    - unrestricted_network
+
+- name: Setup Cake Autorate on WAN interface
+  hosts: openwrt_router:&openwrt_playbook_accessible
+  gather_facts: false
+
+  roles:
+    - community.openwrt.init
+    - cake_autorate
+
+- name: Configure Wi-Fi
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
 
   roles:
     - community.openwrt.init
     - wifi
 
 - name: Setup DDNS
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -64,7 +104,7 @@
     - ddns
 
 - name: Setup WireGuard VPN Server
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -72,7 +112,7 @@
     - wireguard
 
 - name: Setup Tailscale Subnet Router
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -82,7 +122,7 @@
       when: (tailscale_enabled | default(false)) | bool
 
 - name: Setup Prometheus Exporter
-  hosts: openwrt_router
+  hosts: openwrt_router:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -90,7 +130,7 @@
     - prometheus_exporter
 
 - name: Setup Prometheus Exporter on APs
-  hosts: openwrt_APs
+  hosts: openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
 
   roles:
@@ -98,7 +138,7 @@
     - prometheus_exporter
 
 - name: Report OpenWrt versions
-  hosts: openwrt_router,openwrt_APs
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
 
   tasks:
@@ -112,7 +152,7 @@
         msg: "{{ inventory_hostname }}: {{ openwrt_release.stdout | trim }}"
 
 - name: Ensure all AP Wi-Fi SSIDs are enabled
-  hosts: openwrt_APs
+  hosts: openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
   serial: 1
   any_errors_fatal: true
@@ -122,3 +162,20 @@
       ansible.builtin.include_role:
         name: wifi
         tasks_from: ensure_enabled.yml
+
+- name: Verify network changes and cancel automatic rollback
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Verify management connection
+      openwrt_wait_for_connection:
+        timeout: 60
+    - name: Verify new network and SSIDs
+      ansible.builtin.import_role:
+        name: unrestricted_network
+        tasks_from: verify.yml
+    - name: Cancel rollback only after verification
+      ansible.builtin.import_role:
+        name: network_rollback
+        tasks_from: disarm.yml

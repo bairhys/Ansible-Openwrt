@@ -1,0 +1,32 @@
+---
+- name: Verify unrestricted interface is up
+  ansible.builtin.raw: >-
+    ubus call network.interface.unrestricted status |
+    jsonfilter -e '@.up' | grep -qx true
+  changed_when: false
+
+- name: Verify each radio is up and advertises its unrestricted interface
+  ansible.builtin.raw: >-
+    ubus call network.wireless status | jsonfilter -e '@.{{ item.key }}.up' | grep -qx true &&
+    ubus call network.wireless status | jsonfilter -e '@.{{ item.key }}.interfaces[*].section' |
+    grep -Fx {{ ('unrestricted_' ~ item.key) | quote }}
+  loop: "{{ wifi_settings | dict2items }}"
+  changed_when: false
+
+- name: Verify unrestricted SSID is enabled on each radio
+  ansible.builtin.raw: >-
+    test "$(uci -q get wireless.unrestricted_{{ item.key }}.disabled)" = 0 &&
+    test "$(uci -q get wireless.unrestricted_{{ item.key }}.ssid)" = {{ unrestricted_ssid | quote }} &&
+    test "$(uci -q get wireless.unrestricted_{{ item.key }}.network)" = unrestricted
+  loop: "{{ wifi_settings | dict2items }}"
+  changed_when: false
+
+- name: Verify router firewall and both shared CAKE queues
+  ansible.builtin.raw: >-
+    fw4 check &&
+    nft list chain inet fw4 selective_cake_forward &&
+    tc qdisc show dev {{ cake_upload_ifb | quote }} | grep -q 'qdisc cake ' &&
+    tc qdisc show dev {{ cake_download_ifb | quote }} | grep -q 'qdisc cake ' &&
+    ! tc qdisc show dev {{ cake_wan_device | quote }} | grep -q 'qdisc cake '
+  when: inventory_hostname in groups['openwrt_router']
+  changed_when: false

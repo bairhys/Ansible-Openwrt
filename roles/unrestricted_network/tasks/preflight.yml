@@ -1,0 +1,35 @@
+---
+- name: Require a dedicated unrestricted Wi-Fi password before changing devices
+  ansible.builtin.assert:
+    that:
+      - vault_unrestricted_wifi_password is defined
+      - (vault_unrestricted_wifi_password | default('') | length) >= 8
+      - (vault_unrestricted_wifi_password | default('') | length) <= 63
+    fail_msg: Add vault_unrestricted_wifi_password (8–63 characters) to the encrypted vault before deployment.
+  no_log: true
+
+- name: Validate separate VLANs and verified uplinks
+  ansible.builtin.assert:
+    that:
+      - iot_vlan_mode in ['dsa', 'swconfig']
+      - unrestricted_vlan_id | int > 1
+      - unrestricted_vlan_id | int < 4095
+      - unrestricted_vlan_id | int != iot_vlan_id | default(20) | int
+      - unrestricted_gateway != (iot_gateway | default('192.168.20.1'))
+      - (wifi_settings | default({}) | length) > 0
+
+- name: Validate DSA trunks
+  ansible.builtin.assert:
+    that:
+      - (iot_dsa_trunk_ports | default([]) | length) > 0
+      - iot_dsa_trunk_ports | difference(iot_dsa_native_ports | default([])) | length == 0
+  when: iot_vlan_mode == 'dsa'
+
+- name: Validate swconfig trunks and reserved VLAN index
+  ansible.builtin.assert:
+    that:
+      - (iot_swconfig_trunk_ports | default([]) | length) > 0
+      - (iot_swconfig_cpu_port | default('') | string | length) > 0
+      - unrestricted_swconfig_vlan_index | int > 0
+      - unrestricted_swconfig_vlan_index | int != iot_swconfig_vlan_index | default(3) | int
+  when: iot_vlan_mode == 'swconfig'

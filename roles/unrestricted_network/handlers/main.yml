@@ -1,0 +1,9 @@
+---
+- name: Restart unrestricted network
+  ansible.builtin.raw: /etc/init.d/network reload
+
+- name: Restart unrestricted DHCP
+  ansible.builtin.raw: /etc/init.d/dnsmasq restart && /etc/init.d/odhcpd restart
+
+- name: Reload unrestricted firewall
+  ansible.builtin.raw: fw4 check && /etc/init.d/firewall reload

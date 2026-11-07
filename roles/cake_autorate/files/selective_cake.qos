@@ -1,0 +1,12 @@
+# SQM owns the lifecycle; selective-cake owns the two shared IFBs and filters.
+sqm_start() {
+    /usr/lib/sqm/selective-cake start
+}
+
+sqm_stop() {
+    /usr/lib/sqm/selective-cake stop
+}
+
+sqm_cleanup() {
+    sqm_stop
+}

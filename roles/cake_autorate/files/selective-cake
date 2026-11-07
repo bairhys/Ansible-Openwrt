@@ -1,0 +1,94 @@
+#!/bin/sh
+# IFB egress reinjection returns to the original device. Clear our mark bits
+# before redirecting so a bridge's lower devices cannot shape a packet twice.
+set -eu
+. "${SELECTIVE_CAKE_CONFIG:-/etc/sqm/selective-cake.conf}"
+STATE_DIR=${SELECTIVE_CAKE_STATE_DIR:-/var/run/selective-cake}
+
+wan_device() {
+    local device
+    device=$(ubus call "network.interface.$WAN_INTERFACE" status 2>/dev/null |
+        jsonfilter -e '@.l3_device' 2>/dev/null) || device=
+    printf '%s\n' "${device:-$WAN_FALLBACK}"
+}
+
+ensure_queue() {
+    local device=$1 rate=$2 direction=$3 mtu
+    ip link show dev "$device" >/dev/null 2>&1 || ip link add name "$device" type ifb
+    mtu=$(ip -o link show dev "$(wan_device)" | sed -n 's/.* mtu \([0-9][0-9]*\) .*/\1/p')
+    ip link set dev "$device" mtu "$mtu" up
+    # Preserve autorate's current bandwidth on hotplug/firewall refresh.
+    if ! tc qdisc show dev "$device" | grep -q 'qdisc cake '; then
+        if [ "$direction" = download ]; then
+            tc qdisc replace dev "$device" root cake bandwidth "${rate}kbit" besteffort triple-isolate nat wash
+        else
+            tc qdisc replace dev "$device" root cake bandwidth "${rate}kbit" besteffort triple-isolate nat
+        fi
+    fi
+}
+
+refresh_filters() {
+    local device wan
+    wan=$(wan_device)
+    # This set update is atomic and does not reset fw4's counters/rules.
+    if nft list set inet fw4 selective_wan_devices >/dev/null 2>&1; then
+        printf 'flush set inet fw4 selective_wan_devices\nadd element inet fw4 selective_wan_devices { "%s" }\n' "$wan" | nft -f -
+    else
+        echo 'selective-cake: fw4 classification is missing' >&2
+        return 1
+    fi
+    for device in $(ip -o link show | awk -F ': ' '{ sub(/@.*/, "", $2); print $2 }'); do
+        case "$device" in lo|"$UPLOAD_IFB"|"$DOWNLOAD_IFB") continue ;; esac
+        if ! tc qdisc show dev "$device" | grep -q 'qdisc clsact '; then
+            tc qdisc add dev "$device" clsact
+        fi
+        tc filter replace dev "$device" egress protocol all pref "$FILTER_PRIORITY" \
+            handle "$UPLOAD_MARK/$MARK_MASK" fw \
+            action skbedit mark "0/$MARK_MASK" pipe \
+            action mirred egress redirect dev "$UPLOAD_IFB"
+        tc filter replace dev "$device" egress protocol all pref "$((FILTER_PRIORITY + 1))" \
+            handle "$DOWNLOAD_MARK/$MARK_MASK" fw \
+            action skbedit mark "0/$MARK_MASK" pipe \
+            action mirred egress redirect dev "$DOWNLOAD_IFB"
+    done
+}
+
+stop_shaping() {
+    local device
+    for device in $(ip -o link show | awk -F ': ' '{ sub(/@.*/, "", $2); print $2 }'); do
+        case "$device" in lo|"$UPLOAD_IFB"|"$DOWNLOAD_IFB") continue ;; esac
+        tc filter del dev "$device" egress protocol all pref "$FILTER_PRIORITY" 2>/dev/null || true
+        tc filter del dev "$device" egress protocol all pref "$((FILTER_PRIORITY + 1))" 2>/dev/null || true
+    done
+    # Leave shared clsact qdiscs and all unrelated filters intact.
+    ip link del dev "$UPLOAD_IFB" 2>/dev/null || true
+    ip link del dev "$DOWNLOAD_IFB" 2>/dev/null || true
+    rm -f "$STATE_DIR/enabled"
+}
+
+mkdir -p "$STATE_DIR"
+# Do not lose the final hotplug event while another refresh is running.
+attempt=0
+while ! mkdir "$STATE_DIR/lock" 2>/dev/null; do
+    attempt=$((attempt + 1))
+    [ "$attempt" -lt 30 ] || { echo 'selective-cake: lock timeout' >&2; exit 1; }
+    sleep 1
+done
+trap 'rmdir "$STATE_DIR/lock"' EXIT
+trap 'exit 1' HUP INT TERM
+case "${1:-}" in
+    start)
+        ensure_queue "$UPLOAD_IFB" "$UPLOAD_KBPS" upload
+        ensure_queue "$DOWNLOAD_IFB" "$DOWNLOAD_KBPS" download
+        refresh_filters
+        touch "$STATE_DIR/enabled"
+        ;;
+    refresh)
+        [ -f "$STATE_DIR/enabled" ] || exit 0
+        ensure_queue "$UPLOAD_IFB" "$UPLOAD_KBPS" upload
+        ensure_queue "$DOWNLOAD_IFB" "$DOWNLOAD_KBPS" download
+        refresh_filters
+        ;;
+    stop) stop_shaping ;;
+    *) echo 'Usage: selective-cake {start|refresh|stop}' >&2; exit 2 ;;
+esac

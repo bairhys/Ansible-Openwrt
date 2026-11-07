@@ -1,0 +1,7 @@
+#!/bin/sh
+# SQM starts on WAN ifup. Refresh adds filters for later-created VLANs/Wi-Fi/VPNs.
+case "$ACTION" in
+    ifup|ifupdate|add|register|move)
+        /usr/lib/sqm/selective-cake refresh || logger -t selective-cake 'Failed to refresh traffic filters'
+        ;;
+esac

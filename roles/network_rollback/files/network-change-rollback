@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+armed=/root/network-change-rollback.armed
+[ -f "$armed" ] || exit 0
+deadline=$(cat "$armed")
+remaining=$((deadline - $(date +%s)))
+[ "$remaining" -le 0 ] || sleep "$remaining"
+[ -f "$armed" ] || exit 0
+archive=$(cat /root/network-change-rollback.archive)
+logger -t network-change-rollback "Restoring $archive"
+/etc/init.d/cake-autorate stop || true
+/etc/init.d/sqm stop || true
+# Remove additions that extraction of the pre-change archive cannot remove.
+rm -f /etc/nftables.d/30-selective-cake.nft
+rm -f /etc/hotplug.d/iface/95-selective-cake /etc/hotplug.d/net/95-selective-cake
+tar -xzf "$archive" -C /
+rm -f "$armed"
+/etc/init.d/network-change-rollback disable
+/etc/init.d/network restart
+/etc/init.d/firewall restart
+/etc/init.d/dnsmasq restart
+/etc/init.d/odhcpd restart
+/sbin/wifi reload
+/etc/init.d/sqm restart || true
+/etc/init.d/cake-autorate restart || true

@@ -1,0 +1,20 @@
+# Included inside table inet fw4. Reserve only the two documented skb mark bits.
+set selective_wan_devices {
+    type ifname
+    elements = { "{{ cake_wan_device }}" }
+}
+
+chain selective_cake_forward {
+    type filter hook forward priority -145; policy accept;
+    meta mark set meta mark & {{ cake_mark_clear_mask }}
+    iifname "br-unrestricted" return
+    oifname "br-unrestricted" return
+    oifname @selective_wan_devices counter meta mark set meta mark | {{ cake_upload_mark }} return
+    iifname @selective_wan_devices counter meta mark set meta mark | {{ cake_download_mark }}
+}
+
+chain selective_cake_output {
+    type route hook output priority -145; policy accept;
+    meta mark set meta mark & {{ cake_mark_clear_mask }}
+    oifname @selective_wan_devices counter meta mark set meta mark | {{ cake_upload_mark }}
+}

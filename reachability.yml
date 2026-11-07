@@ -1,0 +1,31 @@
+---
+- name: Select accessible OpenWrt hosts for this run
+  hosts: openwrt_router:openwrt_APs
+  gather_facts: false
+  tags: [always]
+  tasks:
+    - name: Check authenticated SSH access without requiring Python
+      ansible.builtin.raw: 'true'
+      vars:
+        ansible_ssh_timeout: "{{ openwrt_reachability_timeout | default(10) }}"
+      register: openwrt_access_probe
+      changed_when: false
+      failed_when: false
+      ignore_unreachable: true
+      ignore_errors: true
+      check_mode: false
+
+    - name: Include accessible hosts in subsequent plays
+      ansible.builtin.group_by:
+        key: openwrt_playbook_accessible
+      changed_when: false
+      when:
+        - not (openwrt_access_probe.unreachable | default(false))
+        - openwrt_access_probe.rc | default(1) | int == 0
+
+    - name: Report hosts excluded from this playbook run
+      ansible.builtin.debug:
+        msg: "Excluding {{ inventory_hostname }} from the rest of this run because SSH access failed. It will be checked again on the next run."
+      when: >-
+        (openwrt_access_probe.unreachable | default(false)) or
+        (openwrt_access_probe.rc | default(1) | int != 0)

@@ -1,0 +1,23 @@
+---
+# VLAN 30 follows the physically verified IoT uplinks on each host.
+unrestricted_vlan_id: 30
+unrestricted_swconfig_vlan_index: 4
+unrestricted_gateway: 192.168.30.1
+unrestricted_netmask: 255.255.255.0
+unrestricted_ssid: ExampleUnrestricted
+unrestricted_dhcp_start: 100
+unrestricted_dhcp_limit: 150
+unrestricted_dhcp_leasetime: 12h
+
+cake_wan_interface: wan
+cake_wan_device: eth1
+cake_upload_ifb: ifb-cake-ul
+cake_download_ifb: ifb-cake-dl
+# Reserve these two skb mark bits; all other bits are preserved.
+cake_upload_mark: '0x01000000'
+cake_download_mark: '0x02000000'
+cake_mark_mask: '0x03000000'
+cake_mark_clear_mask: '0xfcffffff'
+cake_filter_priority: 30300
+cake_initial_upload_kbps: 10000
+cake_initial_download_kbps: 80000

@@ -1,0 +1,95 @@
+---
+- name: Configure VLAN 30 on the DSA bridge
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: bridge-vlan
+    find:
+      device: "{{ iot_dsa_bridge_device | default('br-lan') }}"
+      vlan: "{{ unrestricted_vlan_id | string }}"
+    autocommit: true
+    value:
+      device: "{{ iot_dsa_bridge_device | default('br-lan') }}"
+      vlan: "{{ unrestricted_vlan_id }}"
+      local: true
+      ports: "{{ iot_dsa_trunk_ports | map('regex_replace', '$', ':t') | list }}"
+  when: iot_vlan_mode == 'dsa'
+  notify: Restart unrestricted network
+
+- name: Configure VLAN 30 on the legacy switch
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: switch_vlan
+    name: unrestricted_switch_vlan
+    autocommit: true
+    value:
+      device: "{{ iot_swconfig_device }}"
+      vlan: "{{ unrestricted_swconfig_vlan_index }}"
+      vid: "{{ unrestricted_vlan_id }}"
+      ports: "{{ ([iot_swconfig_cpu_port | string ~ 't'] + (iot_swconfig_trunk_ports | map('regex_replace', '$', 't') | list)) | join(' ') }}"
+  when: iot_vlan_mode == 'swconfig'
+  notify: Restart unrestricted network
+
+- name: Configure legacy VLAN device
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: device
+    name: unrestricted_vlan
+    autocommit: true
+    value:
+      name: "{{ iot_swconfig_cpu_device }}.{{ unrestricted_vlan_id }}"
+      type: 8021q
+      ifname: "{{ iot_swconfig_cpu_device }}"
+      vid: "{{ unrestricted_vlan_id }}"
+  when: iot_vlan_mode == 'swconfig'
+  notify: Restart unrestricted network
+
+# A dedicated bridge is required to join both radios to the tagged uplink.
+- name: Bridge unrestricted Wi-Fi and its VLAN uplink
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: device
+    name: unrestricted_bridge
+    autocommit: true
+    value:
+      name: br-unrestricted
+      type: bridge
+      bridge_empty: '1'
+      ports:
+        - "{{ ((iot_dsa_bridge_device | default('br-lan')) ~ '.' ~ unrestricted_vlan_id) if iot_vlan_mode == 'dsa' else (iot_swconfig_cpu_device ~ '.' ~ unrestricted_vlan_id) }}"
+  notify: Restart unrestricted network
+
+- name: Configure unrestricted interface
+  community.openwrt.uci:
+    command: section
+    config: network
+    type: interface
+    name: unrestricted
+    autocommit: true
+    value: "{{ {'device': 'br-unrestricted', 'proto': 'static', 'ipaddr': unrestricted_gateway, 'netmask': unrestricted_netmask, 'ip6assign': '0', 'delegate': '0'} if inventory_hostname in groups['openwrt_router'] else {'device': 'br-unrestricted', 'proto': 'none', 'delegate': '0'} }}"
+  notify: Restart unrestricted network
+
+- name: Configure router DHCP or disable it on APs
+  community.openwrt.uci:
+    command: section
+    config: dhcp
+    type: dhcp
+    name: unrestricted
+    autocommit: true
+    value:
+      interface: unrestricted
+      ignore: "{{ '0' if inventory_hostname in groups['openwrt_router'] else '1' }}"
+      start: "{{ unrestricted_dhcp_start }}"
+      limit: "{{ unrestricted_dhcp_limit }}"
+      leasetime: "{{ unrestricted_dhcp_leasetime }}"
+      ra: disabled
+      dhcpv6: disabled
+      ndp: disabled
+  notify: Restart unrestricted DHCP
+
+- name: Configure unrestricted router firewall
+  ansible.builtin.include_tasks: firewall.yml
+  when: inventory_hostname in groups['openwrt_router']

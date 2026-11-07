@@ -9,18 +9,14 @@
   - "luci-app-sqm"
   - "sqm-scripts"
   - "kmod-sched-cake"
+  - "kmod-ifb"
+  - "kmod-sched-core"
+  - "tc-full"
+  - "ip-full"
   - "fping"
 
-- name: Upload sqm config to device
-  community.openwrt.copy:
-    src: sqm
-    dest: /etc/config/sqm
-    mode: '0644'
-  register: sqm_config_upload
-
-- name: Reload sqm service
-  ansible.builtin.raw: /etc/init.d/sqm restart
-  when: sqm_config_upload.changed
+- name: Configure selective CAKE shaping
+  ansible.builtin.include_tasks: selective.yml
 
 - name: Look for local custom tasks
   include_tasks: "{{ custom_tasks_file }}"
@@ -47,8 +43,8 @@
   when: "'missing' in cake_autorate_check.stdout and cake_script_download.rc == 0"
 
 - name: Upload cake autorate config to device
-  community.openwrt.copy:
-    src: "{{ custom_cake_config | default('config.primary.sh') }}"
+  community.openwrt.template:
+    src: config.primary.sh.j2
     dest: /root/cake-autorate/config.primary.sh
     mode: '0644'
   register: cake_config_upload
@@ -100,4 +96,4 @@
   when: cake_script_exporter_initd_download_copied.changed
 
 - name: Reload prometheus-cake-autorate-exporter service
-  ansible.builtin.raw: service prometheus-node-exporter-cake-autorate enable && service prometheus-node-exporter-cake-autorate restart  
+  ansible.builtin.raw: service prometheus-node-exporter-cake-autorate enable && service prometheus-node-exporter-cake-autorate restart

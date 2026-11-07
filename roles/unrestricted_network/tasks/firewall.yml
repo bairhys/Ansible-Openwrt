@@ -1,0 +1,99 @@
+---
+- name: Check for legacy duplicate LAN membership in the WireGuard zone
+  ansible.builtin.raw: uci -q get firewall.Wireguard.network
+  register: unrestricted_wireguard_networks
+  changed_when: false
+  failed_when: false
+
+- name: Keep LAN exclusively in its own firewall zone
+  community.openwrt.uci:
+    command: del_list
+    key: firewall.Wireguard.network
+    value: lan
+    autocommit: true
+  when: "'lan' in unrestricted_wireguard_networks.stdout.split()"
+  notify: Reload unrestricted firewall
+
+- name: Create unrestricted firewall zone
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: zone
+    name: unrestricted
+    autocommit: true
+    value:
+      name: unrestricted
+      network: [unrestricted]
+      input: REJECT
+      output: ACCEPT
+      forward: REJECT
+  notify: Reload unrestricted firewall
+
+- name: Allow unrestricted DHCP and DNS
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: "unrestricted_{{ item.name }}"
+    autocommit: true
+    value:
+      name: "Allow-Unrestricted-{{ item.name }}"
+      src: unrestricted
+      proto: "{{ item.proto }}"
+      dest_port: "{{ item.port }}"
+      family: ipv4
+      target: ACCEPT
+  loop:
+    - {name: DHCP, proto: udp, port: '67'}
+    - {name: DNS, proto: 'tcp udp', port: '53'}
+  notify: Reload unrestricted firewall
+
+- name: Allow requested routed access
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: forwarding
+    name: "{{ item.src }}_to_{{ item.dest }}"
+    autocommit: true
+    value:
+      src: "{{ item.src }}"
+      dest: "{{ item.dest }}"
+  loop:
+    - {src: unrestricted, dest: wan}
+    - {src: unrestricted, dest: lan}
+    - {src: unrestricted, dest: iot}
+    - {src: lan, dest: unrestricted}
+    - {src: lan, dest: iot}
+  notify: Reload unrestricted firewall
+
+- name: Keep unrestricted routed service IPv4-only
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: unrestricted_block_ipv6
+    autocommit: true
+    value:
+      name: Block-Unrestricted-IPv6-Forwarding
+      src: unrestricted
+      dest: '*'
+      family: ipv6
+      proto: all
+      target: REJECT
+  notify: Reload unrestricted firewall
+
+- name: Explicitly block IoT-initiated access to trusted networks
+  community.openwrt.uci:
+    command: section
+    config: firewall
+    type: rule
+    name: "iot_block_{{ item }}"
+    autocommit: true
+    value:
+      name: "Block-IoT-to-{{ item }}"
+      src: iot
+      dest: "{{ item }}"
+      proto: all
+      target: REJECT
+  loop: [lan, unrestricted]
+  notify: Reload unrestricted firewall

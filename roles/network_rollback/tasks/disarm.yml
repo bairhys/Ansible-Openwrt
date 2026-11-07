@@ -1,0 +1,6 @@
+---
+- name: Disarm the rollback service and retain its backup archive
+  ansible.builtin.raw: |
+    rm -f /root/network-change-rollback.armed
+    /etc/init.d/network-change-rollback stop
+    /etc/init.d/network-change-rollback disable

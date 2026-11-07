@@ -31,6 +31,10 @@ all:
       - "1.1.1.1"
       - "1.0.0.1"
 
+    # VLAN 30 uses the verified IoT trunks. Shared defaults are in
+    # group_vars/all/unrestricted.yml; its password belongs in the vault.
+    unrestricted_ssid: ExampleUnrestricted
+
     wifi_country: "AU"
 
   children:

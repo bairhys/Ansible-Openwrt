@@ -46,3 +46,6 @@ wifi_iot_iface:
   rrm_neighbor_report: "{{ wifi_common_iface.rrm_neighbor_report }}"
   rrm_beacon_report: "{{ wifi_common_iface.rrm_beacon_report }}"
   wmm: "{{ wifi_common_iface.wmm }}"
+
+# Separate credentials and roaming domain; share radio and roaming capabilities.
+wifi_unrestricted_iface: "{{ wifi_iot_iface | combine({'ssid': unrestricted_ssid, 'key': vault_unrestricted_wifi_password, 'network': 'unrestricted', 'isolate': '0', 'mobility_domain': 'abce'}) }}"
