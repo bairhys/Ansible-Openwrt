@@ -163,6 +163,9 @@
   no_log: true
   register: unrestricted_wifi_uci_result
 
+- name: Ensure Wi-Fi daemons are ready
+  ansible.builtin.import_tasks: ensure_runtime.yml
+
 - name: Reload wireless interface
   ansible.builtin.raw: wifi reload
   when: uci_result.changed or iot_wifi_uci_result.changed or unrestricted_wifi_uci_result.changed

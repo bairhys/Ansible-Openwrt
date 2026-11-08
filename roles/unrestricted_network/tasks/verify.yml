@@ -11,6 +11,26 @@
     ubus call network.wireless status | jsonfilter -e '@.{{ item.key }}.interfaces[*].section' |
     grep -Fx {{ ('unrestricted_' ~ item.key) | quote }}
   loop: "{{ wifi_settings | dict2items }}"
+  register: unrestricted_radio_ready
+  until: unrestricted_radio_ready.rc == 0
+  retries: 24
+  delay: 5
+  changed_when: false
+
+- name: Wait for configured SSIDs to finish startup and radar checks
+  ansible.builtin.raw: |
+    interfaces=$(ubus call network.wireless status |
+      jsonfilter -e '@.{{ item.key }}.interfaces[*].ifname')
+    test -n "$interfaces" || exit 1
+    for interface in $interfaces; do
+      hostapd_cli -p /var/run/hostapd -i "$interface" status |
+        grep -qx 'state=ENABLED' || exit 1
+    done
+  loop: "{{ wifi_settings | dict2items }}"
+  register: unrestricted_ssids_ready
+  until: unrestricted_ssids_ready.rc == 0
+  retries: 132
+  delay: 5
   changed_when: false
 
 - name: Verify unrestricted SSID is enabled on each radio

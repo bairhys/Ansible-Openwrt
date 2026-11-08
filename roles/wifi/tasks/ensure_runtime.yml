@@ -1,0 +1,30 @@
+---
+# procd can report wpad as active even when it has no running instances.
+- name: Ensure wpad is enabled and both Wi-Fi daemons are available
+  ansible.builtin.raw: |
+    set -e
+    if ! /etc/init.d/wpad enabled; then
+      /etc/init.d/wpad enable
+      echo WPAD_ENABLED
+    fi
+    if ! ubus list hostapd | grep -qx hostapd ||
+       ! ubus list wpa_supplicant | grep -qx wpa_supplicant; then
+      /etc/init.d/wpad restart
+      echo WPAD_RESTARTED
+    fi
+  register: wifi_runtime
+  changed_when: "'WPAD_ENABLED' in wifi_runtime.stdout or 'WPAD_RESTARTED' in wifi_runtime.stdout"
+
+- name: Wait for hostapd and wpa_supplicant control interfaces
+  ansible.builtin.raw: |
+    ubus list hostapd | grep -qx hostapd &&
+    ubus list wpa_supplicant | grep -qx wpa_supplicant
+  register: wifi_daemons_ready
+  until: wifi_daemons_ready.rc == 0
+  retries: 15
+  delay: 2
+  changed_when: false
+
+- name: Resume wireless setup after recovering wpad
+  ansible.builtin.raw: wifi reload
+  when: "'WPAD_RESTARTED' in wifi_runtime.stdout"
