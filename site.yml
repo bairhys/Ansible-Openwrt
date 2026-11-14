@@ -1,6 +1,63 @@
 ---
 - import_playbook: reachability.yml
 
+- name: Prepare AP gateway and DNS before OpenWrt package initialization
+  hosts: openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  serial: 1
+  any_errors_fatal: true
+  vars:
+    main_router_address: "{{ hostvars[groups['openwrt_router'][0]].ansible_host }}"
+  tasks:
+    # Use raw commands: community.openwrt.init may itself need working DNS
+    # and Internet routing to install its compatibility packages.
+    - name: Point AP management gateway and DNS at the main router
+      ansible.builtin.raw: |
+        set -eu
+        router={{ main_router_address | quote }}
+        if [ "$(uci -q get network.lan.gateway || true)" = "$router" ] &&
+           [ "$(uci -q get network.lan.dns || true)" = "$router" ]; then
+          exit 0
+        fi
+        uci set network.lan.gateway="$router"
+        uci -q delete network.lan.dns || true
+        uci add_list network.lan.dns="$router"
+        uci commit network
+        /etc/init.d/network reload
+        echo gateway_dns_updated
+      register: ap_gateway_dns
+      changed_when: "'gateway_dns_updated' in ap_gateway_dns.stdout"
+
+    - name: Verify AP configured and active gateway and router DNS
+      ansible.builtin.raw: |
+        set -eu
+        router={{ main_router_address | quote }}
+        [ "$(uci -q get network.lan.gateway)" = "$router" ]
+        [ "$(uci -q get network.lan.dns)" = "$router" ]
+        ip -4 route get 1.1.1.1 | awk -v router="$router" '
+          { for (i = 1; i < NF; i++) if ($i == "via" && $(i+1) == router) found = 1 }
+          END { exit !found }'
+        nslookup downloads.openwrt.org "$router"
+      register: ap_gateway_dns_check
+      changed_when: false
+      retries: 6
+      delay: 5
+      until: ap_gateway_dns_check.rc == 0
+      when: not ansible_check_mode
+
+- name: Check routing and DNS before OpenWrt package initialization
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+  any_errors_fatal: true
+  tasks:
+    - name: Verify an active IPv4 default route and system DNS resolution
+      ansible.builtin.raw: |
+        set -eu
+        ip -4 route show default | awk 'END { exit (NR == 0) }'
+        nslookup downloads.openwrt.org
+      changed_when: false
+      when: not ansible_check_mode
+
 - name: Validate unrestricted network before any device changes
   hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
