@@ -137,20 +137,6 @@
     - community.openwrt.init
     - prometheus_exporter
 
-- name: Report OpenWrt versions
-  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
-  gather_facts: false
-
-  tasks:
-    - name: Read OpenWrt release
-      ansible.builtin.raw: ". /etc/openwrt_release && echo \"$DISTRIB_DESCRIPTION ($DISTRIB_TARGET)\""
-      register: openwrt_release
-      changed_when: false
-
-    - name: Show OpenWrt version
-      ansible.builtin.debug:
-        msg: "{{ inventory_hostname }}: {{ openwrt_release.stdout | trim }}"
-
 - name: Ensure all AP Wi-Fi SSIDs are enabled
   hosts: openwrt_APs:&openwrt_playbook_accessible
   gather_facts: false
@@ -179,3 +165,37 @@
       ansible.builtin.import_role:
         name: network_rollback
         tasks_from: disarm.yml
+
+- name: Report OpenWrt version and password status
+  hosts: openwrt_router:openwrt_APs:&openwrt_playbook_accessible
+  gather_facts: false
+
+  tasks:
+    - name: Read OpenWrt release
+      ansible.builtin.raw: ". /etc/openwrt_release && echo \"$DISTRIB_DESCRIPTION ($DISTRIB_TARGET)\""
+      register: openwrt_release
+      changed_when: false
+
+    - name: Show OpenWrt version
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: {{ openwrt_release.stdout | trim }}"
+
+    - name: Check whether the root password is set
+      ansible.builtin.raw: |
+        awk -F: '
+          $1 == "root" && $2 != "" && $2 !~ /^[!*]/ { found = 1 }
+          END { exit !found }
+        ' /etc/shadow
+      register: openwrt_root_password
+      changed_when: false
+      failed_when: false
+
+    - name: Warn if the root password is not set
+      ansible.builtin.debug:
+        msg: "WARNING: {{ inventory_hostname }} has no usable root password set. Set one on the OpenWrt device with passwd."
+      when: openwrt_root_password.rc == 1
+
+    - name: Warn if the root password could not be checked
+      ansible.builtin.debug:
+        msg: "WARNING: Could not check the root password on {{ inventory_hostname }}."
+      when: openwrt_root_password.rc not in [0, 1]
