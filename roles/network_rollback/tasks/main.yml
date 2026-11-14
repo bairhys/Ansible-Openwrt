@@ -45,12 +45,60 @@
   ansible.builtin.raw: |
     set -eu
     umask 077
+
+    # A previous run can leave an archive behind only after its rollback was
+    # disarmed.  Remove those stale snapshots before making a new one; an
+    # armed rollback never reaches this branch because the validation above
+    # returns "reuse".
+    for old in /root/network-backup-*.tar.gz; do
+      [ -e "$old" ] || continue
+      rm -f -- "$old"
+    done
+    rm -f /root/network-change-rollback.archive
+
+    # Keep this snapshot small enough for devices with a sub-megabyte overlay.
+    # The archive is needed only until the final verification play succeeds.
+    available=$(df -k / | awk 'NR == 2 { print $4 }')
+    case "$available" in
+      ''|*[!0-9]*) echo 'Unable to determine free overlay space.' >&2; exit 1 ;;
+    esac
+    [ "$available" -ge 128 ] || {
+      echo "Only ${available} KB is free on the overlay; refusing to create a rollback archive." >&2
+      exit 1
+    }
+
     backup="/root/network-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
     cd /
     paths=''
-    for path in etc/config etc/hotplug.d etc/nftables.d etc/rc.d etc/init.d etc/sqm usr/lib/sqm root/cake-autorate; do
-      [ ! -d "$path" ] || paths="$paths $path"
+    for path in \
+      etc/config/network \
+      etc/config/firewall \
+      etc/config/wireless \
+      etc/config/dhcp \
+      etc/config/system \
+      etc/config/usteer \
+      etc/config/sqm \
+      etc/config/ddns \
+      etc/config/wireguard \
+      etc/config/tailscale \
+      etc/profile \
+      etc/init.d/iperf3 \
+      etc/init.d/iot-client-isolation \
+      etc/init.d/network-change-rollback \
+      etc/init.d/prometheus-node-exporter-cake-autorate \
+      etc/hotplug.d/iface/95-selective-cake \
+      etc/hotplug.d/net/95-selective-cake \
+      etc/nftables.d/30-selective-cake.nft \
+      etc/sqm/selective-cake-firewall \
+      etc/sqm/selective-cake.conf \
+      etc/sqm/selective-sqm.config \
+      usr/lib/sqm/selective-cake \
+      usr/lib/sqm/selective_cake.qos \
+      root/cake-autorate/config.primary.sh; do
+      [ -e "$path" ] || continue
+      paths="$paths $path"
     done
+    [ -n "$paths" ] || { echo 'No rollback files were found.' >&2; exit 1; }
     tar -czf "$backup" $paths
     printf '%s\n' "$backup" > /root/network-change-rollback.archive
     printf '%s\n' "$backup"
